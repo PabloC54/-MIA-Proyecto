@@ -1,9 +1,12 @@
+#ifndef STORAGEMANAGER_H
+#define STORAGEMANAGER_H
+
 #include <iostream>
 using namespace std;
 
-int chmod(string path, string ugo, string r = "");
+int chmod(string path, string ugo, string r);
 
-int mkfile(string path, string r = "", string size = "", string cont = "");
+int mkfile(string path, string r, string size, string cont);
 
 int cat(string filen);
 
@@ -13,7 +16,7 @@ int edit(string path, string cont);
 
 int ren(string path, string name);
 
-int mkdir(string path, string p = "");
+int mkdir(string path, string p);
 
 int cp(string path, string dest);
 
@@ -21,6 +24,8 @@ int mv(string path, string mv);
 
 int find(string path, string name);
 
-int chown(string path, string usr, string r = "");
+int chown(string path, string r, string usr);
 
 int chgrp(string usr, string grp);
+
+#endif

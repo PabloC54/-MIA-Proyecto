@@ -1,10 +1,10 @@
 #include <iostream>
 #include <fstream>
 #include <cstdlib>
-#include "ReportManager.h"
+#include "reportmanager.h"
 using namespace std;
 
-int rep(string name, string path, string id, string ruta = "")
+int rep(string name, string path, string id, string ruta)
 {
 
     return 0;

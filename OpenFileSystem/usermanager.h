@@ -1,3 +1,6 @@
+#ifndef USERMANAGER_H
+#define USERMANAGER_H
+
 #include <iostream>
 using namespace std;
 
@@ -12,3 +15,5 @@ int rmgrp(string name);
 int mkusr(string usr, string pwd, string grp);
 
 int rmusr(string usr);
+
+#endif

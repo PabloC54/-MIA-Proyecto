@@ -1,7 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <cstdlib>
-#include "UserManager.h"
+#include "usermanager.h"
 using namespace std;
 
 int login(string usuario, string password, string id)

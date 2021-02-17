@@ -12,20 +12,12 @@
 #include "usermanager.h"
 #include "storagemanager.h"
 #include "reportmanager.h"
+#include "util.h"
 
 using namespace std;
 
 int readline(string line);
 int exec(string path);
-string unquote(string word);
-
-// int fdisk(string size, string u, string path, string type, string f, string _delete, string name,  string add);
-
-class Exception : public std::runtime_error
-{
-public:
-    Exception(const char *what) : runtime_error(what) {}
-};
 
 int main()
 {
@@ -35,7 +27,7 @@ int main()
     {
         cout << "$ ";
         getline(cin, command);
-
+        command = "exec -path='test.script'";
         if (command != "exit")
         {
             int val = readline(command);
@@ -45,11 +37,15 @@ int main()
 
         break;
     }
+
     cout << " exiting . . ." << endl;
 }
 
 int readline(string line)
 {
+    if (boost::algorithm::starts_with(line, "#"))
+        return 0; // COMENTARIOS
+
     transform(line.begin(), line.end(), line.begin(), ::tolower);
     vector<string> words;
     istringstream ss(line);
@@ -59,6 +55,9 @@ int readline(string line)
 
     while (ss >> word)
     {
+        if (boost::algorithm::starts_with(word, "#"))
+            break; // COMENTARIOS
+
         if (!regex_search(word, re))
             words.push_back(word);
         else
@@ -67,10 +66,8 @@ int readline(string line)
             while (true)
             {
                 if (boost::algorithm::ends_with(word, "\"") || boost::algorithm::ends_with(word, "'"))
-                {
-
                     break;
-                }
+
                 ss >> temp;
                 word += " " + temp;
             }
@@ -81,22 +78,17 @@ int readline(string line)
 
     try
     {
-        int val = 0;
         string command = words[0];
-
         map<string, string> params;
+        string string_temp;
 
         for (int i = 1; i < words.size(); i++) // extrayendo los parametros en un map
         {
             stringstream ss(words[i]);
-            string string_temp;
             vector<string> vector_temp;
 
             while (std::getline(ss, string_temp, '='))
-            {
                 vector_temp.push_back(string_temp);
-            }
-            cout << endl;
 
             params[vector_temp[0]] = unquote(vector_temp[1]);
         }
@@ -162,8 +154,6 @@ int readline(string line)
             if (params.find("-add") != params.end())
                 add = params["-add"];
 
-            if (size.empty())
-                throw Exception("-size parameter missing");
             if (path.empty())
                 throw Exception("-path parameter missing");
             if (type.empty())
@@ -487,6 +477,26 @@ int readline(string line)
         }
         else if (command == "rep")
         { // REPORT MANAGER
+
+            string name, path, id, ruta;
+
+            if (params.find("-name") != params.end())
+                name = params["-name"];
+            if (params.find("-path") != params.end())
+                path = params["-path"];
+            if (params.find("-id") != params.end())
+                id = params["-id"];
+            if (params.find("-ruta") != params.end())
+                ruta = params["-ruta"];
+
+            if (name.empty())
+                throw Exception("-name parameter missing");
+            if (path.empty())
+                throw Exception("-path parameter missing");
+            if (id.empty())
+                throw Exception("-id parameter missing");
+
+            return rep(name, path, id, ruta);
         }
         else if (command == "pause")
         { // PAUSE
@@ -508,11 +518,7 @@ int readline(string line)
             return exec(path);
         }
         else
-        {
             throw Exception("command unrecognized");
-        }
-
-        return 0;
     }
     catch (const Exception &e)
     {
@@ -554,18 +560,4 @@ int exec(string path)
         cout << "[#] Exception: " << e.what() << endl;
         return -1;
     }
-}
-
-string unquote(string word)
-{
-    if (boost::algorithm::ends_with(word, "\"") || boost::algorithm::ends_with(word, "'"))
-    {
-        word = word.substr(0, word.length() - 1);
-    }
-    if (boost::algorithm::starts_with(word, "\"") || boost::algorithm::starts_with(word, "'"))
-    {
-        word = word.substr(1, word.length() - 1);
-    }
-
-    return word;
 }

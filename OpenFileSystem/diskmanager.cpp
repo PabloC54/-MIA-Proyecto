@@ -1,99 +1,232 @@
 #include <iostream>
 #include <fstream>
 #include <cstdlib>
+#include "time.h"
 #include "diskmanager.h"
+#include "util.h"
+#include "structs.h"
 using namespace std;
 
 int mkdisk(string size, string f, string u, string path)
 {
-    // time_t t;
-    // struct tm *tm;
-    // char fechayhora[20];
+    if (f.empty())
+        f = "ff";
+    if (u.empty())
+        u = "m";
 
-    // t = time(NULL);
-    // tm = localtime(&t);
-    // strftime(fechayhora, 20, "%Y/%m/%d %H:%M:%S", tm);
+    if (f != "bf" && f != "ff" && f != "wf")
+        throw Exception("-f parameter non-valid. Valid: bf (best fit), ff (first fit), wf (worst fit)");
 
-    // if (unit == "")
-    // {
-    //     unit = "M";
-    // }
+    int units;
 
-    // int numSize = stoi(size);
+    if (u == "k")
+        units = 1024;
+    else if (u == "m")
+        units = 1024 * 1024;
+    else
+        throw Exception("-u parameter non-valid. Valid: k (kilobytes), m (megabytes)");
 
-    // if (unit == "M" || unit == "m")
-    // {
-    //     numSize = numSize * 1024 * 1024;
-    // }
-    // else
-    // {
-    //     numSize = numSize * 1024;
-    // }
+    int size_int = stoi(size);
 
-    // if (numSize < 0)
-    // {
-    //     cout << "Error, tamanio del disco demasiado grande." << endl;
-    //     return;
-    // }
+    if (u == "k")
+        size_int = size_int * 1024;
+    else
+        size_int = size_int * 1024 * 1024;
 
-    // Structs::MBR disco;
-    // disco.size = numSize;
-    // strcpy(disco.date, fechayhora);
-    // disco.sign = rand() % 100;
+    if (size_int < 0)
+        throw Exception("disk size was too big");
 
-    // FILE *validar = fopen(path.c_str(), "r");
-    // if (validar != NULL)
-    // {
-    //     cout << "Disco ya existente., validar path" << endl;
-    //     fclose(validar);
-    //     return;
-    // }
-    // //cout << "Nuevo disco: \nSize: " << disco.size << "\ndate: " << disco.date << "\nFit: " << disco.fit << "\nDisk_Signature: " << disco.disk_signature << endl;
-    // // cout << "Bits del MBR: " << sizeof(Structs::MBR) << endl;
+    time_t t = time(NULL);
+    struct tm *tm = localtime(&t);
 
-    // // cout << "Path: " << path << endl;
-    // int isNulo = 0;
-    // FILE *bfile = fopen(path.c_str(), "wb");
-    // if (bfile != NULL)
-    // {
-    //     fwrite("\0", 1, 1, bfile);
-    //     fseek(bfile, numSize - 1, SEEK_SET);
-    //     fwrite("\0", 1, 1, bfile);
-    //     rewind(bfile);
-    //     fwrite(&disco, sizeof(Structs::MBR), 1, bfile);
-    //     cout << "Disco creado exitosamente" << endl;
-    // }
-    // else
-    // {
-    //     isNulo = 1;
-    //     cout << "Path creado exitosamente" << endl;
-    //     //Creo la carpeta de la direccion.
-    //     string comando1 = "mkdir -p \"" + path + "\"";
-    //     string comando2 = "rmdir \"" + path + "\"";
-    //     system(comando1.c_str());
-    //     system(comando2.c_str());
+    char date[16];
+    strftime(date, 16, "%d/%m/%Y %H:%M", tm);
 
-    //     bfile = fopen(path.c_str(), "wb");
-    //     fwrite("\0", 1, 1, bfile);
-    //     fseek(bfile, numSize - 1, SEEK_SET);
-    //     fwrite("\0", 1, 1, bfile);
-    //     rewind(bfile);
-    //     fwrite(&disco, sizeof(Structs::MBR), 1, bfile);
-    //     cout << "Disco creado exitosamente" << endl;
-    // }
-    // fclose(bfile);
+    MBR mbr;
+    mbr.size = size_int;
+    strcpy(mbr.date, date);
+    mbr.signature = rand() % 100;
+    mbr.fit = f;
+
+    FILE *file_temp = fopen(path.c_str(), "r");
+    if (file_temp != NULL)
+    {
+        fclose(file_temp);
+        throw Exception("disk already created");
+    }
+    //cout << "Nuevo disco: \nSize: " << disco.size << "\ndate: " << disco.date << "\nFit: " << disco.fit << "\nDisk_Signature: " << disco.disk_signature << endl;
+    // cout << "Bits del MBR: " << sizeof(Structs::MBR) << endl;
+
+    // cout << "Path: " << path << endl;
+    int isNulo = 0;
+    FILE *file = fopen(path.c_str(), "wb");
+
+    if (file == NULL)
+    {
+        //Creo la carpeta de la direccion.
+        string command_make = "mkdir -p \"" + path + "\"";
+        string command_remove = "rmdir \"" + path + "\"";
+        system(command_make.c_str());
+        system(command_remove.c_str());
+        cout << "path created successfully" << endl;
+
+        file = fopen(path.c_str(), "wb");
+    }
+
+    fwrite("\0", 1, 1, file);
+    fseek(file, size_int - 1, SEEK_SET);
+    fwrite("\0", 1, 1, file);
+    rewind(file);
+    fwrite(&mbr, sizeof(MBR), 1, file);
+    cout << "disk created successfully" << endl;
+
+    fclose(file);
 
     return 0;
 }
 
 int rmdisk(string path)
 {
+    FILE *file_temp = fopen(path.c_str(), "r");
+    if (file_temp == NULL)
+        throw Exception("specified disk does not exist");
 
+    string command_remove = "rm \"" + path + "\"";
+    system(command_remove.c_str());
+    cout << "disk removed successfully" << endl;
+
+    fclose(file_temp);
     return 0;
 }
 
-int fdisk(string size, string u, string path, string type, string f, string _delete, string name,  string add)
+int fdisk(string size, string u, string path, string type, string f, string _delete, string name, string add)
 {
+    if (u.empty())
+        u = "k";
+    if (f.empty())
+        f = "wf";
+    if (type.empty())
+        type = "p";
+
+    if (!_delete.empty() && !add.empty())
+        throw Exception("-add, -delete parameters are incompatible");
+
+    if (f != "bf" && f != "ff" && f != "wf")
+        throw Exception("-f parameter non-valid. Valid: bf (best fit), ff (first fit), wf (worst fit)");
+
+    if (type != "p" && type != "e" && type != "l")
+        throw Exception("-type parameter non-valid. Valid: p (primary), e (extended), l (logical)");
+
+    // hacer validaciones de particiones
+    // extendidas = 1
+    // cant_primariass + extendidas <= 4
+    // no se deben sobrepasar limites
+    // particiones logicas se crean si existe extendida, no debe sobrepasar el tamaño de esta
+
+    // validar name no repetido
+
+    if (add.empty() && add.empty())
+    { // CREATE MODE
+        if (size.empty())
+            throw Exception("-size parameter is needed when creating a partition");
+
+        FILE *file_temp = fopen(path.c_str(), "r");
+        if (file_temp != NULL)
+        {
+            fclose(file_temp);
+            throw Exception("disk already exists");
+        }
+
+        int units;
+
+        if (u == "b")
+            units = 1;
+        else if (u == "k")
+            units = 1024;
+        else if (u == "m")
+            units = 1024 * 1024;
+        else
+            throw Exception("-u parameter non-valid. Valid: b (bytes), k (kilobytes), m (megabytes)");
+
+        int size_int = stoi(size);
+
+        if (u == "k")
+            size_int = size_int * 1024;
+        else if (u == "m")
+            size_int = size_int * 1024 * 1024;
+
+        if (size_int < 0)
+            throw Exception("disk size was too big");
+
+        Partition par;
+        // par.position = saber;
+        par.size = size_int;
+        par.fit = 32;
+
+
+
+        // validar los fit
+    }
+    else if (!add.empty())
+    { // ADD MODE
+        FILE *file_temp = fopen(path.c_str(), "r");
+        if (file_temp == NULL)
+            throw Exception("specified disk does not exist");
+        // validar que exista la particion
+
+        int units;
+
+        if (u == "b")
+            units = 1;
+        else if (u == "k")
+            units = 1024;
+        else if (u == "m")
+            units = 1024 * 1024;
+        else
+            throw Exception("-u parameter non-valid. Valid: b (bytes), k (kilobytes), m (megabytes)");
+
+        int size_int = stoi(add);
+
+        if (u == "k")
+            size_int = size_int * 1024;
+        else if (u == "m")
+            size_int = size_int * 1024 * 1024;
+
+        if (size_int < 0)
+            throw Exception("disk size was too big");
+
+    }
+    else
+    { // DELETE MODE
+        FILE *file_temp = fopen(path.c_str(), "r");
+        if (file_temp == NULL)
+            throw Exception("specified disk does not exist");
+        // validar que exista la particion
+    }
+
+    int isNulo = 0;
+    FILE *file = fopen(path.c_str(), "wb");
+
+    if (file == NULL)
+    {
+        //Creo la carpeta de la direccion.
+        string command_make = "mkdir -p \"" + path + "\"";
+        string command_remove = "rmdir \"" + path + "\"";
+        system(command_make.c_str());
+        system(command_remove.c_str());
+        cout << "path created successfully" << endl;
+
+        file = fopen(path.c_str(), "wb");
+    }
+
+    // fwrite("\0", 1, 1, file);
+    // fseek(file, size_int - 1, SEEK_SET);
+    // fwrite("\0", 1, 1, file);
+    // rewind(file);
+    // fwrite(&mbr, sizeof(MBR), 1, file);
+    cout << "disk created successfully" << endl;
+
+    fclose(file);
 
     return 0;
 }

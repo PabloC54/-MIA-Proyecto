@@ -1,5 +1,5 @@
-#ifndef STRUCTS_H
-#define STRUCTS_H
+#ifndef DiskStructs
+#define DiskStructs
 
 using namespace std;
 
@@ -36,10 +36,10 @@ struct EBR
 };
 
 
-class structs
+class diskstructs
 {
 public:
-    structs();
+    diskstructs();
 };
 
 #endif

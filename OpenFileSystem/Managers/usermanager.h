@@ -1,5 +1,5 @@
-#ifndef USERMANAGER_H
-#define USERMANAGER_H
+#ifndef UserManager
+#define UserManager
 
 #include <iostream>
 using namespace std;

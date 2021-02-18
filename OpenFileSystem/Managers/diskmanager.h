@@ -1,5 +1,5 @@
-#ifndef DISKMANAGER_H
-#define DISKMANAGER_H
+#ifndef DiskManager
+#define DiskManager
 
 #include <iostream>
 #include <fstream>

@@ -3,8 +3,8 @@
 #include <cstdlib>
 #include "time.h"
 #include "diskmanager.h"
-#include "util.h"
-#include "structs.h"
+#include "../Util/util.h"
+#include "../Structs/structs.h"
 using namespace std;
 
 int mkdisk(string size, string f, string u, string path)
@@ -46,7 +46,7 @@ int mkdisk(string size, string f, string u, string path)
     mbr.size = size_int;
     strcpy(mbr.date, date);
     mbr.signature = rand() % 100;
-    mbr.fit = f;
+    mbr.fit = f[0];
 
     FILE *file_temp = fopen(path.c_str(), "r");
     if (file_temp != NULL)
@@ -54,21 +54,18 @@ int mkdisk(string size, string f, string u, string path)
         fclose(file_temp);
         throw Exception("disk already created");
     }
-    //cout << "Nuevo disco: \nSize: " << disco.size << "\ndate: " << disco.date << "\nFit: " << disco.fit << "\nDisk_Signature: " << disco.disk_signature << endl;
-    // cout << "Bits del MBR: " << sizeof(Structs::MBR) << endl;
 
-    // cout << "Path: " << path << endl;
-    int isNulo = 0;
     FILE *file = fopen(path.c_str(), "wb");
 
     if (file == NULL)
     {
-        //Creo la carpeta de la direccion.
         string command_make = "mkdir -p \"" + path + "\"";
         string command_remove = "rmdir \"" + path + "\"";
-        system(command_make.c_str());
+
+        if (system(command_make.c_str()) != 0)
+            throw Exception("could'nt create path");
+
         system(command_remove.c_str());
-        cout << "path created successfully" << endl;
 
         file = fopen(path.c_str(), "wb");
     }
@@ -78,7 +75,6 @@ int mkdisk(string size, string f, string u, string path)
     fwrite("\0", 1, 1, file);
     rewind(file);
     fwrite(&mbr, sizeof(MBR), 1, file);
-    cout << "disk created successfully" << endl;
 
     fclose(file);
 
@@ -92,8 +88,9 @@ int rmdisk(string path)
         throw Exception("specified disk does not exist");
 
     string command_remove = "rm \"" + path + "\"";
-    system(command_remove.c_str());
-    cout << "disk removed successfully" << endl;
+
+    if (system(command_remove.c_str()) != 0)
+        throw Exception("couldn't remove disk");
 
     fclose(file_temp);
     return 0;
@@ -163,8 +160,6 @@ int fdisk(string size, string u, string path, string type, string f, string _del
         par.size = size_int;
         par.fit = 32;
 
-
-
         // validar los fit
     }
     else if (!add.empty())
@@ -194,7 +189,6 @@ int fdisk(string size, string u, string path, string type, string f, string _del
 
         if (size_int < 0)
             throw Exception("disk size was too big");
-
     }
     else
     { // DELETE MODE
@@ -212,9 +206,11 @@ int fdisk(string size, string u, string path, string type, string f, string _del
         //Creo la carpeta de la direccion.
         string command_make = "mkdir -p \"" + path + "\"";
         string command_remove = "rmdir \"" + path + "\"";
-        system(command_make.c_str());
+
+        if (system(command_make.c_str()) != 0)
+            throw Exception("could'nt create path");
+
         system(command_remove.c_str());
-        cout << "path created successfully" << endl;
 
         file = fopen(path.c_str(), "wb");
     }
@@ -224,7 +220,6 @@ int fdisk(string size, string u, string path, string type, string f, string _del
     // fwrite("\0", 1, 1, file);
     // rewind(file);
     // fwrite(&mbr, sizeof(MBR), 1, file);
-    cout << "disk created successfully" << endl;
 
     fclose(file);
 
@@ -233,6 +228,14 @@ int fdisk(string size, string u, string path, string type, string f, string _del
 
 int mount(string path, string name)
 {
+
+    if (path.empty() && path.empty())
+    {
+        // STRUCTS_H::print();
+        return 0;
+    }
+
+    // hacer el montaje
 
     return 0;
 }

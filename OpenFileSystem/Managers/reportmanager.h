@@ -1,5 +1,5 @@
-#ifndef REPORTMANAGER_H
-#define REPORTMANAGER_H
+#ifndef ReportManager
+#define ReportManager
 
 #include <iostream>
 using namespace std;

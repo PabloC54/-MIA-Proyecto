@@ -3,8 +3,6 @@
 
 using namespace std;
 
-
-
 string unquote(string word)
 {
     if (boost::algorithm::ends_with(word, "\"") || boost::algorithm::ends_with(word, "'"))

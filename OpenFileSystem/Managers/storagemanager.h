@@ -1,5 +1,5 @@
-#ifndef STORAGEMANAGER_H
-#define STORAGEMANAGER_H
+#ifndef StorageManager
+#define StorageManager
 
 #include <iostream>
 using namespace std;

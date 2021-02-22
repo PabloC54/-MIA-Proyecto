@@ -16,7 +16,8 @@ int exec(string path)
     {
         while (!data.eof())
             while (getline(data, line))
-                cout << "$ " << line << endl << "return value: " << readline(line) << endl;
+                cout << "$ " << line << endl
+                     << "return value: " << readline(line) << endl;
 
         data.close();
         cout << "  >> file closed <<" << endl;

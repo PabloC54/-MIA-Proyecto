@@ -60,13 +60,19 @@ int readline(string line)
 
         for (int i = 1; i < words.size(); i++) // extrayendo los parametros en un map
         {
-            stringstream ss(words[i]);
-            vector<string> vector_temp;
+            try
+            {
+                stringstream ss(words[i]);
+                vector<string> vector_temp;
 
-            while (std::getline(ss, string_temp, '='))
-                vector_temp.push_back(string_temp);
+                while (std::getline(ss, string_temp, '='))
+                    vector_temp.push_back(string_temp);
 
-            params[vector_temp[0]] = unquote(vector_temp[1]);
+                params[vector_temp[0]] = unquote(vector_temp[1]);
+            }
+            catch(Exception e){
+                throw Exception("bad parameters use (-param=\"value\")");
+            }
         }
 
         map<string, string>::iterator it;

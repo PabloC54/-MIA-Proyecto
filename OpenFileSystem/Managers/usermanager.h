@@ -4,6 +4,10 @@
 #include <iostream>
 using namespace std;
 
+extern bool logged;
+extern string user;
+extern string password;
+
 int login(string usuario, string password, string id);
 
 int logout();

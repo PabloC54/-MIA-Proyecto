@@ -2,10 +2,19 @@
 #include <fstream>
 #include <cstdlib>
 #include "storagemanager.h"
+#include "../Util/util.h"
 using namespace std;
+
+bool logged;
+string user, password;
 
 int chmod(string path, string ugo, string r)
 {
+    if (!logged)
+        throw Exception("no sesion active");
+
+    if (user != "root")
+        throw Exception("user has no permissions");
 
     return 0;
 }

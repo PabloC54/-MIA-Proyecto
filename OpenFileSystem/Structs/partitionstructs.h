@@ -1,21 +1,18 @@
-#ifndef MountStructs
-#define MountStructs
+#ifndef PartitionStructs
+#define PartitionStructs
 #include <vector>
 
 using namespace std;
 
+extern vector<disk> mounted;
+
 char L[26];
+for (int ch = 'A'; ch <= 'Z'; ch++)
+    L[ch - 'a'] = ch;
+
 int D[99];
-
-void init()
-{
-    for (int ch = 'A'; ch <= 'Z'; ch++)
-        L[ch - 'A'] = ch;
-
-    for (int d = 1; d <= 99; d++)
-        D[d - 1] = d;
-}
-
+for (int d = 1; d <= 99; d++)
+    D[d - 1] = d;
 
 // ESTRUCTURAS PARA MOUNT
 
@@ -25,7 +22,7 @@ struct partition
 {
     int id;
     char name[16];
-    int status;
+    int status
 };
 
 struct disk
@@ -36,11 +33,9 @@ struct disk
     int status;
 };
 
-vector<disk> mounted;
-
 disk *getDiskMounted(char path[])
 {
-    for (disk dk : mounted)
+    for (dk : mounted)
         if (dk.path == path)
             return &dk;
 
@@ -49,32 +44,30 @@ disk *getDiskMounted(char path[])
 
 partition *getPartitionMounted(disk *dk, char name[])
 {
-    for (MountStructs::partition par : dk->partitions)
+    for (par : dk->partitions)
         if (par.name == name)
             return &par;
 
     return NULL;
 }
 
-int *getPartitionMountedByID(char disk_id, int par_id)
+int[] * getPartitionMountedByID(char[] disk_id, int par_id)
 {
     for (int i = 0; i < 26; i++)
         if (mounted[i].id == disk_id)
             for (int j = 0; j < 99; j++)
                 if (mounted[i].partitions[j].id == par_id)
-                    return &pair(i, j);
+                    return pair(i, j);
 
     return NULL;
 }
 
 char getDiskId()
 {
-    init();
-
-    for (char id : L)
+    for (id : L)
     {
         bool br = false;
-        for (disk dk : mounted)
+        for (dk : mounted)
             if (dk.id == id)
             {
                 br = true;
@@ -85,20 +78,18 @@ char getDiskId()
             continue;
 
         return id;
-    };
+    }
 
     return NULL;
 }
 
-int getPartitionId(disk* dk)
+int getPartitionId()
 {
-    init();
-    
-    for (int id : D)
+    for (id : D)
     {
         bool br = false;
-        for (MountStructs::partition par : dk->partitions)
-            if (par.id == id)
+        for (dk : mounted)
+            if (dk.id == id)
             {
                 br = true;
                 break;
@@ -118,7 +109,5 @@ class mountstructs
 public:
     mountstructs();
 };
-
-extern vector<disk> mounted;
 
 #endif

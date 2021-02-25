@@ -1,4 +1,4 @@
-# [ORGA] Proyecto 1
+# [MIA] Proyecto 1
 
 | Nombre | Carnet |
 | :----: | :----: |

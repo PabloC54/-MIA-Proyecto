@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <cstdlib>
+#include <boost/algorithm/string.hpp>
 
 #include "../Analyzer/scriptreader.h"
 #include "../Util/util.h"
@@ -14,13 +15,19 @@ int exec(string path)
 
     if (data)
     {
+        cout << ">> file opened <<" << endl;
         while (!data.eof())
             while (getline(data, line))
-                cout << "$ " << line << endl
-                     << "return value: " << readline(line) << endl;
+            {
+                if (boost::algorithm::starts_with(line, "#") || std::all_of(line.begin(), line.end(), [](char c) { return std::isspace(c); }))
+                    continue; // COMENTARIOS
+
+                cout << "$ " << line << endl;
+                readline(line);
+            }
 
         data.close();
-        cout << "  >> file closed <<" << endl;
+        cout << ">> file closed <<" << endl;
 
         return 0;
     }

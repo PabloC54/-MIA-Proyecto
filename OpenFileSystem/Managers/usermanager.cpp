@@ -9,6 +9,7 @@ using namespace std;
 bool logged;
 string user, password;
 
+
 int login(string usuario, string password, string id)
 {
 

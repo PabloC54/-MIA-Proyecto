@@ -7,9 +7,8 @@
 #include "../Structs/diskstructs.h"
 #include "../Structs/mountstructs.h"
 
-vector<disk> mounted;
-
 using namespace std;
+vector<disk> mounted;
 
 int mkdisk(string size, string f, string u, string path)
 {
@@ -40,9 +39,15 @@ int mkdisk(string size, string f, string u, string path)
     if (size_int < 0)
         throw Exception("disk size was too big");
 
+    FILE *file = fopen(path.c_str(), "r");
+    if (file != NULL)
+    {
+        fclose(file);
+        throw Exception("disk already created");
+    }
+
     time_t t = time(NULL);
     struct tm *tm = localtime(&t);
-
     char date[16];
     strftime(date, 16, "%d/%m/%Y %H:%M", tm);
 
@@ -50,29 +55,17 @@ int mkdisk(string size, string f, string u, string path)
     mbr.size = size_int;
     strcpy(mbr.date, date);
     mbr.signature = rand() % 100;
-    mbr.fit = f[0];
+    strcpy(mbr.fit, f.c_str());
 
-    FILE *file_temp = fopen(path.c_str(), "r");
-    if (file_temp != NULL)
-    {
-        fclose(file_temp);
-        throw Exception("disk already created");
-    }
+    string command_make = "mkdir -p \"" + path + "\"";
+    string command_remove = "rmdir \"" + path + "\"";
 
-    FILE *file = fopen(path.c_str(), "wb");
+    if (system(command_make.c_str()) != 0)
+        throw Exception("could not create path");
 
-    if (file == NULL)
-    {
-        string command_make = "mkdir -p \"" + path + "\"";
-        string command_remove = "rmdir \"" + path + "\"";
+    system(command_remove.c_str());
 
-        if (system(command_make.c_str()) != 0)
-            throw Exception("could'nt create path");
-
-        system(command_remove.c_str());
-
-        file = fopen(path.c_str(), "wb");
-    }
+    file = fopen(path.c_str(), "wb");
 
     fwrite("\0", 1, 1, file);
     fseek(file, size_int - 1, SEEK_SET);
@@ -87,16 +80,16 @@ int mkdisk(string size, string f, string u, string path)
 
 int rmdisk(string path)
 {
-    FILE *file_temp = fopen(path.c_str(), "r");
-    if (file_temp == NULL)
+    FILE *file = fopen(path.c_str(), "r");
+    if (file == NULL)
         throw Exception("specified disk does not exist");
 
     string command_remove = "rm \"" + path + "\"";
 
     if (system(command_remove.c_str()) != 0)
-        throw Exception("couldn't remove disk");
+        throw Exception("could not remove disk");
 
-    fclose(file_temp);
+    fclose(file);
     return 0;
 }
 
@@ -119,6 +112,7 @@ int fdisk(string size, string u, string path, string type, string f, string _del
         throw Exception("-type parameter non-valid. Valid: p (primary), e (extended), l (logical)");
 
     FILE *file = fopen(path.c_str(), "rb");
+
     if (file == NULL)
         throw Exception("disk does not exist");
 
@@ -127,7 +121,7 @@ int fdisk(string size, string u, string path, string type, string f, string _del
     MBR mbr;
     fread(&mbr, sizeof(MBR), 1, file);
 
-    if (add.empty() && delete.empty())
+    if (add.empty() && _delete.empty())
     { // CREATE MODE
         if (size.empty())
             throw Exception("-size parameter is needed when creating a partition");
@@ -147,64 +141,63 @@ int fdisk(string size, string u, string path, string type, string f, string _del
         else
             throw Exception("-u parameter non-valid. Valid: b (bytes), k (kilobytes), m (megabytes)");
 
-        int size_int = stoi(size);
-
-        if (u == "k")
-            size_int = size_int * 1024;
-        else if (u == "m")
-            size_int = size_int * 1024 * 1024;
+        int size_int = stoi(size) * units;
 
         if (size_int < 0)
             throw Exception("partition size was too big");
 
         if (type == "p")
         {
-            Partition *partition = getNewPatition(mbr, f);
-            if (partition == NULL)
-                throw Exception("disk already has 4 primary partitions");
-
-            strcpy(partition->name, name.c_str());
-            partition->status = '0';
-            partition->type = type;
-            partition->size = size;
-        }
-        else if (type == "e")
-        {
-            Partition *partition = getNewPatition(mbr, f);
-            if (partition == NULL)
+            Partition partition = getNewPatition(mbr, f);
+            if (partition.status == '\\')
                 throw Exception("disk already has 4 primary partitions");
 
             for (Partition par : mbr.partitions)
                 if (par.name == name)
                     throw Exception("partition name in use");
 
-            if (mbr.partition_1.type == 'e' || mbr.partition_2.type == 'e' || mbr.partition_3.type == 'e' || mbr.partition_4.type == 'e' ||)
-                throw Exception("disk already has an extended partition");
+            strcpy(partition.name, name.c_str());
+            partition.type = type[0];
+            partition.size = size_int;
+        }
+        else if (type == "e")
+        {
+            Partition partition = getNewPatition(mbr, f);
+            if (partition.status == '\\')
+                throw Exception("disk already has 4 primary partitions");
 
-            strcpy(partition->name, name.c_str());
-            partition->type = type;
-            partition->size = size;
+            for (Partition par : mbr.partitions)
+            {
+                if (par.name == name)
+                    throw Exception("partition name in use");
+                if (par.type == 'e')
+                    throw Exception("disk already has an extended partition");
+            }
+
+            strcpy(partition.name, name.c_str());
+            partition.type = type[0];
+            partition.size = size_int;
 
             EBR ebr;
             ebr.name[0] = '\0';
-            ebr.status = '0';
+            ebr.status = '\1';
             ebr.size = -1;
             ebr.start = -1;
             ebr.next = -1;
-            ebr.fit = '-';
+            ebr.fit = '\0';
 
-            fseek(file, partition->start, SEEK_SET);
+            fseek(file, partition.start, SEEK_SET);
             fwrite(&ebr, sizeof(ebr), 1, file);
         }
         else
-        { // LÓGICA
+        { // PARTICIÓN LÓGICA
         }
     }
     else if (!add.empty())
     { // RESIZE MODE
-        Partition *partition = getPartition(mbr, name.c_str());
+        Partition partition = getPartition(mbr, name.c_str());
 
-        if (partition == NULL)
+        if (partition.status == '\0')
             throw Exception("specified partition does not exist");
 
         int units;
@@ -218,27 +211,23 @@ int fdisk(string size, string u, string path, string type, string f, string _del
         else
             throw Exception("-u parameter non-valid. Valid: b (bytes), k (kilobytes), m (megabytes)");
 
-        int size_int = stoi(add);
-
-        if (u == "k")
-            size_int = size_int * 1024;
-        else if (u == "m")
-            size_int = size_int * 1024 * 1024;
+        int size_int = stoi(add) * units;
 
         if (size_int < 0)
             throw Exception("disk size was too big");
 
-        if (!isAddable())
-            throw Exception("partition can't be grown by " + to_string(add) + u);
+        if (!isResizable(mbr, name, size_int))
+        {
+            string msg = "partition cannot be resized by " + add + u;
+            throw Exception(msg.c_str());
+        }
 
-        partition->size = partition->size + size_int;
+        partition.size = partition.size + size_int;
     }
     else
     { // DELETE MODE
-        Partition *partition = getPartition(mbr, name.c_str());
-
-        if (partition == NULL)
-            throw Exception("specified partition does not exist");
+        if (_delete != "fast" && _delete != "full")
+            throw Exception("-delete parameter non-valid. Valid: fast, full");
 
         int units;
 
@@ -251,17 +240,90 @@ int fdisk(string size, string u, string path, string type, string f, string _del
         else
             throw Exception("-u parameter non-valid. Valid: b (bytes), k (kilobytes), m (megabytes)");
 
-        int size_int = stoi(_delete);
-
-        if (u == "k")
-            size_int = size_int * 1024;
-        else if (u == "m")
-            size_int = size_int * 1024 * 1024;
+        int size_int = stoi(_delete) * units;
 
         if (size_int < 0)
             throw Exception("disk size was too big");
 
-        //validar que se pueda eliminar el espacio
+        Partition partition = getPartition(mbr, name.c_str());
+
+        if (partition.status != '\0')
+        {
+            if (partition.type == 'p')
+            { // PRIMARIA
+
+                partition.name[0] = '\0';
+                partition.status = '\0';
+                partition.type = '\0';
+                partition.start = -1;
+                partition.size = -1;
+
+                if (_delete == "full")
+                {
+                    // Rellenar con \0
+                }
+            }
+            else if (partition.type == 'e')
+            { // EXTENDIDA
+
+                partition.name[0] = '\0';
+                partition.status = '\0';
+                partition.type = '\0';
+                partition.start = -1;
+                partition.size = -1;
+
+                if (_delete == "full")
+                {
+                    // Rellenar con \0
+                }
+            }
+            else
+            {
+                throw Exception("specified partition does not exist");
+            }
+        }
+        else
+        { // LÓGICA
+
+            for (Partition par : mbr.partitions)
+            {
+                if (par.type == 'e')
+                {
+                    partition = par;
+                }
+            }
+
+            if (partition.name[0] = '\0')
+                throw Exception("specified partition does not exist");
+
+            fseek(file, partition.start, SEEK_SET);
+
+            EBR ebr;
+            fread(&ebr, sizeof(EBR), 1, file);
+
+            while (ebr.next != -1)
+            {
+                if (ebr.name == name.c_str())
+                {
+                    // eliminar
+
+                    if (_delete == "full")
+                    {
+                        // Rellenar con \0
+                    }
+
+                    break;
+                }
+                else
+                {
+                    fseek(file, ebr.next, SEEK_SET);
+                    fread(&ebr, sizeof(EBR), 1, file);
+                }
+            }
+
+            if (ebr.next == -1)
+                throw Exception("specified partition does not exist");
+        }
     }
 
     fseek(file, 0, SEEK_SET);
@@ -291,22 +353,22 @@ int mount(string path, string name)
 
     Partition partition = getPartition(mbr, name.c_str());
 
-    if (partition == NULL)
+    if (partition.status == '\0')
         throw Exception("partition does not exist");
 
     disk dk = getDiskMounted(path.c_str());
 
-    if (dk == NULL)
+    if (dk.status == -1)
     {
-        disk *dk;
-        dk->id = getDiskId();
-        strcpy(dk->path, path.c_str());
-        dk->status = 1;
+        disk dk;
+        dk.id = getDiskId();
+        strcpy(dk.path, path.c_str());
+        dk.status = 1;
     }
 
-    MountStructs::partition par = getPartitionMounted(dk, name.c_str());
+    MountStructs::partition par = MountStructs::getPartitionMounted(dk, name.c_str());
 
-    if (par != NULL)
+    if (par.status != -1)
         throw Exception("partition is already mounted");
 
     par.id = getPartitionId(dk);
@@ -314,9 +376,9 @@ int mount(string path, string name)
     par.status = 1;
 
     for (int i = 0; i < 26; i++)
-        if (dk.partitions[i].name[0] == '\n')
+        if (dk.partitions[i].status == -1)
         {
-            dk.partitions[i].id = getPartitionId(name.c_str());
+            dk.partitions[i].id = getPartitionId(dk);
             strcpy(dk.partitions[i].name, name.c_str());
             dk.partitions[i].status = 1;
         }
@@ -335,30 +397,30 @@ int unmount(string id)
         throw Exception("non-valid id");
 
     int disk_i, par_i;
+    vector<int> ids;
 
     if (id.length() == 4)
     {
-        int *ids = getPartitionMountedByID(id.substr(3, 4)[0], stoi(id.substr(2, 3)));
-    
-        if (ids == NULL)
+        ids = getPartitionMountedByID(id.substr(3, 4)[0], stoi(id.substr(2, 3)));
+
+        if (ids.empty())
             throw Exception("id does not exist");
 
-        disk_i = ids[0]*;
-        par_i = ids[1]*;
+        disk_i = ids[0];
+        par_i = ids[1];
     }
     else
     {
-        int *ids = getPartitionMountedByID(id.substr(4, 5)[0], stoi(id.substr(2, 4)));
+        ids = getPartitionMountedByID(id.substr(4, 5)[0], stoi(id.substr(2, 4)));
 
-        if (ids == NULL)
+        if (ids.empty())
             throw Exception("id does not exist");
 
-        disk_i = ids[0]*;
-        par_i = ids[1]*;
+        disk_i = ids[0];
+        par_i = ids[1];
     }
 
     mounted[disk_i].partitions[par_i].id = 0;
-    mounted[disk_i].partitions[par_i].name = "";
     mounted[disk_i].partitions[par_i].status = 0;
 
     for (MountStructs::partition par : mounted[disk_i].partitions)

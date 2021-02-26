@@ -1,6 +1,10 @@
-#include "mountstructs.h"
+#include "partitionstructs.h"
+// #include <vector>
 
-mountstructs::mountstructs()
+partitionstructs::partitionstructs()
 {
 
 }
+
+// using namespace std;
+

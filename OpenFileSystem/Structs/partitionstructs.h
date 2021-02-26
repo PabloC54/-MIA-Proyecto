@@ -4,110 +4,77 @@
 
 using namespace std;
 
-extern vector<disk> mounted;
+// ESTRUCTURAS PARA MKFS
 
-char L[26];
-for (int ch = 'A'; ch <= 'Z'; ch++)
-    L[ch - 'a'] = ch;
-
-int D[99];
-for (int d = 1; d <= 99; d++)
-    D[d - 1] = d;
-
-// ESTRUCTURAS PARA MOUNT
-
-// 98<num_particion><letra_disco>
-
-struct partition
+struct superblock
 {
-    int id;
-    char name[16];
-    int status
+    int filesystem_type;
+    int inodes_count;
+    int free_inodes_count;
+    int blocks_count;
+    int free_blocks_count;
+    char mtime[16];
+    char umtime[16];
+    int mnt_count;
+    int magic;
+    int inode_size;
+    int block_size;
+    int first_inode;
+    int frist_block;
+    int bm_inode_start;
+    int bm_block_start;
+    int inode_start;
+    int block_start;
 };
 
-struct disk
+struct inode
 {
-    char id;
-    char path[100];
-    struct partition partitions[99];
-    int status;
+    int uid;
+    int gid;
+    int size;
+    char atime[16];
+    char ctime[16];
+    char mtime[16];
+    int block[12];
+    char type;
+    int permissions;
 };
 
-disk *getDiskMounted(char path[])
+struct folder_content
 {
-    for (dk : mounted)
-        if (dk.path == path)
-            return &dk;
+    char name[12];
+    int inode;
+};
 
-    return NULL;
-}
-
-partition *getPartitionMounted(disk *dk, char name[])
+struct folder_block
 {
-    for (par : dk->partitions)
-        if (par.name == name)
-            return &par;
+    folder_content content[4];
+};
 
-    return NULL;
-}
-
-int[] * getPartitionMountedByID(char[] disk_id, int par_id)
+struct file_block
 {
-    for (int i = 0; i < 26; i++)
-        if (mounted[i].id == disk_id)
-            for (int j = 0; j < 99; j++)
-                if (mounted[i].partitions[j].id == par_id)
-                    return pair(i, j);
+    char content[64];
+};
 
-    return NULL;
-}
-
-char getDiskId()
+struct pointer_block
 {
-    for (id : L)
-    {
-        bool br = false;
-        for (dk : mounted)
-            if (dk.id == id)
-            {
-                br = true;
-                break;
-            }
+    int pointers[16];
+};
 
-        if (br)
-            continue;
-
-        return id;
-    }
-
-    return NULL;
-}
-
-int getPartitionId()
+struct journal
 {
-    for (id : D)
-    {
-        bool br = false;
-        for (dk : mounted)
-            if (dk.id == id)
-            {
-                br = true;
-                break;
-            }
+    char operation[10] = "";
+    char type = '\0';
+    char path[100] = "";
+    char content[50] = ""; // Validar cuando espacio necesitan.
+    char date[16] = "";
+    int size;
+};
 
-        if (br)
-            continue;
-
-        return id;
-    }
-
-    return NULL;
-}
-
-class mountstructs
+class partitionstructs
 {
 public:
-    mountstructs();
+    partitionstructs();
 };
 
 #endif

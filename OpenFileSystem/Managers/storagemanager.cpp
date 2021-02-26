@@ -1,12 +1,11 @@
 #include <iostream>
 #include <fstream>
 #include <cstdlib>
+#include "usermanager.h"
 #include "storagemanager.h"
 #include "../Util/util.h"
 using namespace std;
 
-bool logged;
-string user, password;
 
 int chmod(string path, string ugo, string r)
 {

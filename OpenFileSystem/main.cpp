@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <boost/algorithm/string.hpp>
 
 #include "Analyzer/scriptreader.h"
 
@@ -11,22 +12,23 @@ int main()
 
     while (true)
     {
-        cout << "$ ";
-        getline(cin, command);
-
-        // command = "exec -path='test.script'";
-        if (command == "exit")
+        try
         {
-            cout << " exiting . . ." << endl;
-            break;
-        }
-        else if (command == "pause")
-        {
-            cout << "Press enter to continue . . ." << endl;
-            cin.ignore();
-            continue;
-        }
+            cout << "$ ";
+            getline(cin, command);
 
-        cout << readline(command) << endl;
+            command = "exec -path='test.script'"; // quemado
+
+            if (boost::algorithm::starts_with(command, "#") || std::all_of(command.begin(), command.end(), [](char c) { return std::isspace(c); }))
+                continue; // COMENTARIOS
+
+
+            readline(command);
+        }
+        catch (const std::exception& ex)
+        {
+            cout<<"[###] Fatal"<<endl;
+            cout << ex.what() << endl;
+        }
     }
 }

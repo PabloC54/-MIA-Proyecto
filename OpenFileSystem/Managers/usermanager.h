@@ -8,16 +8,16 @@ extern bool logged;
 extern string user;
 extern string password;
 
-int login(string usuario, string password, string id);
+int login(string, string, string);
 
 int logout();
 
-int mkgrp(string name);
+int mkgrp(string);
 
-int rmgrp(string name);
+int rmgrp(string);
 
-int mkusr(string usr, string pwd, string grp);
+int mkusr(string, string, string);
 
-int rmusr(string usr);
+int rmusr(string);
 
 #endif

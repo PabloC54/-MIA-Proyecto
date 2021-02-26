@@ -19,10 +19,6 @@ using namespace std;
 
 int readline(string line)
 {
-    if (boost::algorithm::starts_with(line, "#"))
-        return 0; // COMENTARIOS
-
-    transform(line.begin(), line.end(), line.begin(), ::tolower);
     vector<string> words;
     istringstream ss(line);
 
@@ -32,7 +28,10 @@ int readline(string line)
     while (ss >> word)
     {
         if (boost::algorithm::starts_with(word, "#"))
-            break; // COMENTARIOS
+        {
+            cout << "comentario" << endl;
+            break;
+        }
 
         if (!regex_search(word, re))
             words.push_back(word);
@@ -55,29 +54,33 @@ int readline(string line)
     try
     {
         string command = words[0];
+        transform(command.begin(), command.end(), command.begin(), ::tolower);
+
         map<string, string> params;
         string string_temp;
 
         for (int i = 1; i < words.size(); i++) // extrayendo los parametros en un map
         {
-            try
-            {
-                stringstream ss(words[i]);
-                vector<string> vector_temp;
+            stringstream ss(words[i]);
+            vector<string> vector_temp;
 
-                while (std::getline(ss, string_temp, '='))
-                    vector_temp.push_back(string_temp);
+            while (std::getline(ss, string_temp, '='))
+                vector_temp.push_back(string_temp);
 
-                params[vector_temp[0]] = unquote(vector_temp[1]);
-            }
-            catch(Exception e){
+            if(vector_temp.size()<2)
                 throw Exception("bad parameters use (-param=\"value\")");
-            }
+
+            transform(vector_temp.at(0).begin(), vector_temp.at(0).end(), vector_temp.at(0).begin(), ::tolower);
+
+            if (vector_temp.at(0) != "-path" && vector_temp.at(0) != "-name")
+                transform(vector_temp.at(1).begin(), vector_temp.at(1).end(), vector_temp.at(1).begin(), ::tolower);
+
+            params[vector_temp[0]] = unquote(vector_temp[1]);
         }
 
-        map<string, string>::iterator it;
-
         // print map
+
+        // map<string, string>::iterator it;
         // for (it = params.begin(); it != params.end(); ++it)
         // {
         //     cout << it->first << " => " << it->second << '\n';
@@ -191,23 +194,23 @@ int readline(string line)
         }
         else if (command == "login")
         { // USER MANAGER
-            string usuario, password, id;
+            string _usuario, _password, id;
 
             if (params.find("-usuario") != params.end())
-                usuario = params["-usuario"];
+                _usuario = params["-usuario"];
             if (params.find("-password") != params.end())
-                password = params["-password"];
+                _password = params["-password"];
             if (params.find("-id") != params.end())
                 id = params["-id"];
 
-            if (usuario.empty())
+            if (_usuario.empty())
                 throw Exception("-usuario parameter missing");
-            if (password.empty())
+            if (_password.empty())
                 throw Exception("-password parameter missing");
             if (id.empty())
                 throw Exception("-id parameter missing");
 
-            return login(usuario, password, id);
+            return login(_usuario, _password, id);
         }
         else if (command == "logout")
         {
@@ -480,12 +483,6 @@ int readline(string line)
 
             return rep(name, path, id, ruta);
         }
-        else if (command == "pause")
-        { // PAUSE
-            cout << "Press enter to continue . . ." << endl;
-            cin.ignore();
-            return 0;
-        }
         else if (command == "exec")
         { // READ SCRIPT
 
@@ -498,6 +495,17 @@ int readline(string line)
                 throw Exception("-path parameter missing");
 
             return exec(path);
+        }
+        else if (command == "pause")
+        { // PAUSE
+            cout << "Press enter to continue . . ." << endl;
+            cin.ignore();
+            return 0;
+        }
+        else if (command == "exit")
+        {
+            cout << " exiting . . ." << endl;
+            exit(0);
         }
         else
             throw Exception("command unrecognized");

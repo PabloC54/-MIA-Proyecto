@@ -1,5 +1,6 @@
 #include <cstddef>
 #include <iostream>
+#include <cstring>
 
 #ifndef DiskStructs
 #define DiskStructs
@@ -9,11 +10,11 @@ using namespace std;
 struct Partition
 {
     char name[16];
-    char status;
-    char type;
-    char fit;
-    int start;
-    int size;
+    char status = 'e';
+    char type = '\0';
+    char fit[2] = {'\0', '\0'};
+    int start = -1;
+    int size = -1;
 };
 
 struct MBR
@@ -21,7 +22,7 @@ struct MBR
     int size;
     char date[16];
     int signature;
-    char fit;
+    char fit[2];
     Partition partitions[4];
 };
 
@@ -31,69 +32,15 @@ struct EBR
     char status;
     int start;
     int size;
-    int next;
+    int next = -1;
     char fit;
 };
 
-Partition getPartition(MBR mbr, char name[])
-{
-    Partition par_temp;
+Partition getPartition(MBR, const char *);
 
-    for(Partition par:mbr.partitions)
+Partition getNewPatition(MBR, string);
 
-    if (par.name == name)
-        par_temp = par;
-        
-
-    return par_temp;
-}
-
-Partition *getNewPatition(MBR mbr, string fit)
-{
-    Partition *par = NULL;
-
-    if (fit == "ff")
-    {
-        if (mbr.partitions[0].name[0] == '\0')
-        {
-            par = &mbr.partitions[0];
-            par->fit = fit[0];
-            par->start = sizeof(MBR);
-        }
-        else if (mbr.partitions[1].name[0] == '\0')
-        {
-            par = & mbr.partitions[1];
-            par->fit = fit[0];
-            par->start = mbr.partitions[0].start + mbr.partitions[0].size;
-        }
-        else if (mbr.partitions[2].name[0] == '\0')
-        {
-            par = & mbr.partitions[2];
-            par->fit = fit[0];
-            par->start = mbr.partitions[1].start + mbr.partitions[1].size;
-        }
-        else if (mbr.partitions[3].name[0] == '\0')
-        {
-            par = & mbr.partitions[3];
-            par->fit = fit[0];
-            par->start = mbr.partitions[2].start + mbr.partitions[2].size;
-        }
-    }
-    else if (fit == "bf")
-    {
-    }
-    else if (fit == "wf")
-    {
-    }
-
-    return par;
-}
-
-bool isAddable(){
-
-
-    return true;
-}
+bool isResizable(MBR, string, int);
 
 class diskstructs
 {

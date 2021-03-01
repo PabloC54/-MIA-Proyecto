@@ -4,7 +4,6 @@
 
 mountstructs::mountstructs()
 {
-
 }
 
 using namespace std;
@@ -21,42 +20,46 @@ void init()
         D[d - 1] = d;
 }
 
-disk getDiskMounted(const char *path)
+disk *getDiskMounted(const char *path)
 {
-    MountStructs::disk dk_temp;
+    MountStructs::disk *dk_temp;
+    disk new_disk;
+    dk_temp = &new_disk;
 
     for (disk dk : mounted)
         if (dk.path == path)
-            dk_temp = dk;
+            dk_temp = &dk;
 
     return dk_temp;
 }
 
-MountStructs::partition getPartitionMounted(disk dk, const char *name)
+MountStructs::partition *getPartitionMounted(disk *dk, const char *name)
 {
-    MountStructs::partition par_temp;
+    MountStructs::partition *par_temp;
+    partition new_partition;
+    par_temp = &new_partition;
 
-    for (MountStructs::partition par : dk.partitions)
+    for (MountStructs::partition par : dk->partitions)
         if (par.name == name)
-            par_temp = par;
+            par_temp = &par;
 
     return par_temp;
 }
 
-vector<int> getPartitionMountedByID(char disk_id, int par_id)
+vector<const char *> getPartitionMountedByID(char disk_id, int par_id)
 {
-    vector<int> par;
+    vector<const char *> data;
 
     for (int i = 0; i < 26; i++)
         if (mounted[i].id == disk_id)
             for (int j = 0; j < 99; j++)
                 if (mounted[i].partitions[j].id == par_id)
                 {
-                    par.insert(par.begin(), i);
-                    par.insert(par.begin(), j);
+                    data.insert(data.begin(), mounted[i].path);
+                    data.insert(data.begin(), mounted[i].partitions[j].name);
                 }
 
-    return par;
+    return data;
 }
 
 char getDiskId()

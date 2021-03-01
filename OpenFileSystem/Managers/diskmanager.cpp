@@ -6,6 +6,7 @@
 #include "../Util/util.h"
 #include "../Structs/diskstructs.h"
 #include "../Structs/mountstructs.h"
+#include "../Structs/partitionstructs.h"
 
 using namespace std;
 vector<disk> mounted;
@@ -148,45 +149,37 @@ int fdisk(string size, string u, string path, string type, string f, string _del
 
         if (type == "p")
         {
-            Partition partition = getNewPatition(mbr, f);
-            if (partition.status == '\\')
+            Partition *partition = getNewPatition(&mbr, f);
+            if (partition->status == '\\')
                 throw Exception("disk already has 4 primary partitions");
 
-            for (Partition par : mbr.partitions)
-                if (par.name == name)
-                    throw Exception("partition name in use");
-
-            strcpy(partition.name, name.c_str());
-            partition.type = type[0];
-            partition.size = size_int;
+            strcpy(partition->name, name.c_str());
+            partition->type = type[0];
+            partition->size = size_int;
         }
         else if (type == "e")
         {
-            Partition partition = getNewPatition(mbr, f);
-            if (partition.status == '\\')
+            Partition *partition = getNewPatition(&mbr, f);
+            if (partition->status == '\\')
                 throw Exception("disk already has 4 primary partitions");
 
             for (Partition par : mbr.partitions)
-            {
-                if (par.name == name)
-                    throw Exception("partition name in use");
                 if (par.type == 'e')
                     throw Exception("disk already has an extended partition");
-            }
 
-            strcpy(partition.name, name.c_str());
-            partition.type = type[0];
-            partition.size = size_int;
+            strcpy(partition->name, name.c_str());
+            partition->status = '\0';
+            partition->type = type[0];
+            partition->size = size_int;
 
             EBR ebr;
-            ebr.name[0] = '\0';
-            ebr.status = '\1';
+            ebr.name[0] = '\\';
             ebr.size = -1;
             ebr.start = -1;
             ebr.next = -1;
-            ebr.fit = '\0';
+            strcpy(ebr.fit, f.c_str());
 
-            fseek(file, partition.start, SEEK_SET);
+            fseek(file, partition->start, SEEK_SET);
             fwrite(&ebr, sizeof(ebr), 1, file);
         }
         else
@@ -195,9 +188,9 @@ int fdisk(string size, string u, string path, string type, string f, string _del
     }
     else if (!add.empty())
     { // RESIZE MODE
-        Partition partition = getPartition(mbr, name.c_str());
+        Partition *partition = getPartition(&mbr, name.c_str());
 
-        if (partition.status == '\0')
+        if (partition->status == '\\')
             throw Exception("specified partition does not exist");
 
         int units;
@@ -222,7 +215,7 @@ int fdisk(string size, string u, string path, string type, string f, string _del
             throw Exception(msg.c_str());
         }
 
-        partition.size = partition.size + size_int;
+        partition->size = partition->size + size_int;
     }
     else
     { // DELETE MODE
@@ -245,32 +238,28 @@ int fdisk(string size, string u, string path, string type, string f, string _del
         if (size_int < 0)
             throw Exception("disk size was too big");
 
-        Partition partition = getPartition(mbr, name.c_str());
+        Partition *partition = getPartition(&mbr, name.c_str());
 
-        if (partition.status != '\0')
+        if (partition->status != '\\')
         {
-            if (partition.type == 'p')
+            if (partition->type == 'p')
             { // PRIMARIA
 
-                partition.name[0] = '\0';
-                partition.status = '\0';
-                partition.type = '\0';
-                partition.start = -1;
-                partition.size = -1;
+                Partition new_partition;
+                partition = &new_partition;
 
                 if (_delete == "full")
                 {
                     // Rellenar con \0
                 }
             }
-            else if (partition.type == 'e')
+            else if (partition->type == 'e')
             { // EXTENDIDA
 
-                partition.name[0] = '\0';
-                partition.status = '\0';
-                partition.type = '\0';
-                partition.start = -1;
-                partition.size = -1;
+                Partition new_partition;
+                partition = &new_partition;
+
+                // eliminar particiones logicas si tiene
 
                 if (_delete == "full")
                 {
@@ -289,14 +278,14 @@ int fdisk(string size, string u, string path, string type, string f, string _del
             {
                 if (par.type == 'e')
                 {
-                    partition = par;
+                    partition = &par;
                 }
             }
 
-            if (partition.name[0] = '\0')
+            if (partition->status = '\\')
                 throw Exception("specified partition does not exist");
 
-            fseek(file, partition.start, SEEK_SET);
+            fseek(file, partition->start, SEEK_SET);
 
             EBR ebr;
             fread(&ebr, sizeof(EBR), 1, file);
@@ -326,7 +315,8 @@ int fdisk(string size, string u, string path, string type, string f, string _del
         }
     }
 
-    fseek(file, 0, SEEK_SET);
+    file = fopen(path.c_str(), "wb");
+    rewind(file);
     fwrite(&mbr, sizeof(MBR), 1, file);
     fclose(file);
 
@@ -351,85 +341,89 @@ int mount(string path, string name)
     MBR mbr;
     fread(&mbr, sizeof(MBR), 1, file);
 
-    Partition partition = getPartition(mbr, name.c_str());
+    Partition *partition = getPartition(&mbr, name.c_str());
 
-    if (partition.status == '\0')
+    if (partition->status == '\\')
         throw Exception("partition does not exist");
 
-    disk dk = getDiskMounted(path.c_str());
+    disk *dk = getDiskMounted(path.c_str());
 
-    if (dk.status == -1)
+    if (dk->status == -1)
     {
-        disk dk;
-        dk.id = getDiskId();
-        strcpy(dk.path, path.c_str());
-        dk.status = 1;
+        if (mounted.size() == 26)
+            throw Exception("max disk mounted count reached");
+
+        disk *dk;
+        dk->id = getDiskId();
+        strcpy(dk->path, path.c_str());
+        dk->status = 0;
+
+        mounted.push_back(*dk);
     }
 
-    MountStructs::partition par = MountStructs::getPartitionMounted(dk, name.c_str());
+    MountStructs::partition *par = MountStructs::getPartitionMounted(dk, name.c_str());
 
-    if (par.status != -1)
+    if (par->status != -1)
         throw Exception("partition is already mounted");
 
-    par.id = getPartitionId(dk);
-    strcpy(par.name, name.c_str());
-    par.status = 1;
-
-    for (int i = 0; i < 26; i++)
-        if (dk.partitions[i].status == -1)
-        {
-            dk.partitions[i].id = getPartitionId(dk);
-            strcpy(dk.partitions[i].name, name.c_str());
-            dk.partitions[i].status = 1;
-        }
-
-    mounted.push_back(dk);
+    par->id = getPartitionId(*dk);
+    strcpy(par->name, name.c_str());
+    par->status = 1;
 
     return 0;
 }
 
 int unmount(string id)
 {
-    if (id.substr(0, 2) != "98")
-        throw Exception("non-valid id (it has to start with '98')");
-
     if (id.length() < 4 || id.length() > 5)
         throw Exception("non-valid id");
 
-    int disk_i, par_i;
-    vector<int> ids;
+    if (id.substr(0, 2) != "98")
+        throw Exception("non-valid id (ids start with '98')");
+
+    int disk_i = -1, par_i = -1;
 
     if (id.length() == 4)
     {
-        ids = getPartitionMountedByID(id.substr(3, 4)[0], stoi(id.substr(2, 3)));
+        char disk_id = id.substr(3, 4)[0];
+        int par_id = stoi(id.substr(2, 3));
 
-        if (ids.empty())
-            throw Exception("id does not exist");
-
-        disk_i = ids[0];
-        par_i = ids[1];
+        for (int i = 0; i < 26; i++)
+            if (mounted[i].id == disk_id)
+                for (int j = 0; j < 99; j++)
+                    if (mounted[i].partitions[j].id == par_id)
+                    {
+                        disk_i = i;
+                        par_i = j;
+                    }
     }
     else
     {
-        ids = getPartitionMountedByID(id.substr(4, 5)[0], stoi(id.substr(2, 4)));
+        char disk_id = id.substr(4, 5)[0];
+        int par_id = stoi(id.substr(2, 4));
 
-        if (ids.empty())
-            throw Exception("id does not exist");
+        for (int i = 0; i < 26; i++)
+            if (mounted[i].id == disk_id)
+                for (int j = 0; j < 99; j++)
+                    if (mounted[i].partitions[j].id == par_id)
+                    {
+                        disk_i = i;
+                        par_i = j;
+                    }
 
-        disk_i = ids[0];
-        par_i = ids[1];
+        if (disk_i == -1 || par_i == -1)
+            throw Exception("partition not mounted");
+
+        mounted[disk_i].partitions[par_i].id = 0;
+        mounted[disk_i].partitions[par_i].status = 0;
+
+        for (MountStructs::partition par : mounted[disk_i].partitions)
+            if (par.id != -1)
+                return 0;
+
+        // mounted.erase(mounted.begin() + ids[0]);
     }
-
-    mounted[disk_i].partitions[par_i].id = 0;
-    mounted[disk_i].partitions[par_i].status = 0;
-
-    for (MountStructs::partition par : mounted[disk_i].partitions)
-        if (par.id != 0)
-            return 0;
-
-    mounted.erase(mounted.begin() + ids[0]);
-    cout << "disk unmounted" << endl;
-
+    
     return 0;
 }
 
@@ -447,7 +441,101 @@ int mkfs(string id, string type, string fs)
     if (fs != "2fs" && fs != "3fs")
         throw Exception("-fs parameter non-valid. Valid: 2fs (EXT2), 3fs (EXT3)");
 
-    //realizar el formateo sobre una particion
+    if (id.length() < 4 || id.length() > 5)
+        throw Exception("non-valid id");
 
+    if (id.substr(0, 2) != "98")
+        throw Exception("non-valid id (ids start with '98')");
+
+    const char *path, *name;
+    vector<const char *> data;
+
+    if (id.length() == 4)
+    {
+        data = getPartitionMountedByID(id.substr(3, 4)[0], stoi(id.substr(2, 3)));
+
+        if (data.empty())
+            throw Exception("id does not exist");
+
+        path = data[0];
+        name = data[1];
+    }
+    else
+    {
+        data = getPartitionMountedByID(id.substr(4, 5)[0], stoi(id.substr(2, 4)));
+
+        if (data.empty())
+            throw Exception("id does not exist");
+
+        path = data[0];
+        name = data[1];
+    }
+
+    FILE *file = fopen(path, "rb");
+    rewind(file);
+
+    MBR mbr;
+    fread(&mbr, sizeof(MBR), 1, file);
+
+    Partition *partition = getPartition(&mbr, name);
+
+    int num_structs;
+    superblock super;
+
+    if (fs == "2fs")
+    {
+        num_structs = (partition->size - sizeof(superblock)) /
+                      (4 + sizeof(inode) + 3 * sizeof(file_block));
+
+        super.filesystem_type = 2;
+
+        super.inodes_count = num_structs;
+        super.free_inodes_count = num_structs;
+        super.blocks_count = 3 * num_structs;
+        super.free_blocks_count = 3 * num_structs;
+
+        super.inode_size = sizeof(inode);
+        super.block_size = sizeof(file_block);
+
+        super.bm_inode_start = sizeof(superblock);
+        super.bm_block_start = super.bm_inode_start + super.inodes_count;
+        super.inode_start = super.bm_block_start + super.blocks_count;
+        super.block_start = super.first_inode + num_structs * super.inodes_count;
+    }
+    else
+    {
+        num_structs = (partition->size - sizeof(superblock)) /
+                      (4 + sizeof(journal) + sizeof(inode) + 3 * sizeof(file_block));
+
+        super.filesystem_type = 3;
+
+        super.inodes_count = num_structs;
+        super.free_inodes_count = num_structs;
+        super.blocks_count = 3 * num_structs;
+        super.free_blocks_count = 3 * num_structs;
+
+        super.journal_size = sizeof(journal);
+        super.inode_size = sizeof(inode);
+        super.block_size = sizeof(file_block);
+
+        super.journal_start = sizeof(superblock);
+        super.bm_inode_start = super.journal_start + super.journal_size;
+        super.bm_block_start = super.bm_inode_start + super.inodes_count;
+        super.inode_start = super.bm_block_start + super.blocks_count;
+        super.block_start = super.first_inode + num_structs * super.inodes_count;
+
+        super.first_journal;
+    }
+
+    partition->status = 1;
+
+    file = fopen(path, "wb");
+    fseek(file, partition->start, SEEK_SET);
+    fwrite(&super, sizeof(superblock), 1, file);
+
+    rewind(file);
+    fwrite(&mbr, sizeof(MBR), 1, file);
+
+    fclose(file);
     return 0;
 }

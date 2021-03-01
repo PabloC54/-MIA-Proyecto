@@ -512,7 +512,7 @@ int readline(string line)
     }
     catch (const Exception &e)
     {
-        cout << "[#] Exception: " << e.what() << endl;
+        cout << "[#] " << e.what() << endl;
         return -1;
     }
 }

@@ -9,22 +9,29 @@ using namespace std;
 struct superblock
 {
     int filesystem_type;
+    int mnt_count = 0;
+    char mtime[16];
+    char umtime[16];
+    int magic = 61267;
+
     int inodes_count;
     int free_inodes_count;
     int blocks_count;
     int free_blocks_count;
-    char mtime[16];
-    char umtime[16];
-    int mnt_count;
-    int magic;
+
+    int journal_size = -1;
     int inode_size;
     int block_size;
-    int first_inode;
-    int frist_block;
+
+    int journal_start = -1;
     int bm_inode_start;
     int bm_block_start;
     int inode_start;
     int block_start;
+
+    int first_journal = -1;
+    int first_inode = 0;
+    int first_block = 0;
 };
 
 struct inode

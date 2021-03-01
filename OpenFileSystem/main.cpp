@@ -1,6 +1,6 @@
 #include <iostream>
 #include <string>
-#include <boost/algorithm/string.hpp>
+// #include <boost/algorithm/string.hpp>
 
 #include "Analyzer/scriptreader.h"
 
@@ -19,15 +19,14 @@ int main()
 
             command = "exec -path='test.script'"; // quemado
 
-            if (boost::algorithm::starts_with(command, "#") || std::all_of(command.begin(), command.end(), [](char c) { return std::isspace(c); }))
-                continue; // COMENTARIOS
+            // if (boost::algorithm::starts_with(command, "#") || std::all_of(command.begin(), command.end(), [](char c) { return std::isspace(c); }))
+            //     continue; // COMENTARIOS
 
-
-            readline(command);
+            cout << readline(command) << endl;
         }
-        catch (const std::exception& ex)
+        catch (const std::exception &ex)
         {
-            cout<<"[###] Fatal"<<endl;
+            cout << "[###] Fatal" << endl;
             cout << ex.what() << endl;
         }
     }

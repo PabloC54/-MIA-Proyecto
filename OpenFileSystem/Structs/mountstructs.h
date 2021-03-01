@@ -15,7 +15,7 @@ void init();
 
 struct partition
 {
-    int id;
+    int id = -1;
     char name[16];
     int status = -1;
 };
@@ -30,11 +30,11 @@ struct disk
 
 extern vector<disk> mounted;
 
-disk getDiskMounted(const char *);
+disk *getDiskMounted(const char *);
 
-MountStructs::partition getPartitionMounted(disk, const char *);
+MountStructs::partition *getPartitionMounted(disk *, const char *);
 
-vector<int> getPartitionMountedByID(char, int);
+vector<const char *> getPartitionMountedByID(char, int);
 
 char getDiskId();
 

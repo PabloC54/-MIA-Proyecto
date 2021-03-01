@@ -10,9 +10,9 @@ using namespace std;
 struct Partition
 {
     char name[16];
-    char status = 'e';
-    char type = '\0';
-    char fit[2] = {'\0', '\0'};
+    char status = '\\';
+    char type = '\\';
+    char fit[2];
     int start = -1;
     int size = -1;
 };
@@ -29,16 +29,16 @@ struct MBR
 struct EBR
 {
     char name[16];
-    char status;
+    char status = '\\';
     int start;
     int size;
     int next = -1;
-    char fit;
+    char fit[2];
 };
 
-Partition getPartition(MBR, const char *);
+Partition* getPartition(MBR*, const char*);
 
-Partition getNewPatition(MBR, string);
+Partition* getNewPatition(MBR*, string);
 
 bool isResizable(MBR, string, int);
 

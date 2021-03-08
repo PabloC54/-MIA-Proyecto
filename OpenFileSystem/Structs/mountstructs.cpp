@@ -1,6 +1,8 @@
 
 #include <vector>
 #include "mountstructs.h"
+#include <string.h>
+#include <string>
 
 mountstructs::mountstructs()
 {
@@ -20,30 +22,63 @@ void init()
         D[d - 1] = d;
 }
 
-disk *getDiskMounted(const char *path)
-{
-    MountStructs::disk *dk_temp;
-    disk new_disk;
-    dk_temp = &new_disk;
+// disk *getDiskMounted(const char *path)
+// {
+//     MountStructs::disk *dk_temp;
+//     disk new_disk;
+//     dk_temp = &new_disk;
 
-    for (disk dk : mounted)
-        if (dk.path == path)
-            dk_temp = &dk;
+//     for (disk dk : mounted)
+//         if (strncmp(dk.path, path, strlen(path)) == 0)
+//         {
+//             return &dk;
+//         }
 
-    return dk_temp;
-}
+//     return dk_temp;
+// }
 
-MountStructs::partition *getPartitionMounted(disk *dk, const char *name)
+// MountStructs::partition *getPartitionMounted(disk *dk, const char *name)
+// {
+//     MountStructs::partition *par_temp;
+//     partition new_partition;
+//     par_temp = &new_partition;
+
+//     for (MountStructs::partition par : dk->partitions)
+//         if (strncmp(par.name, name, strlen(name)) == 0)
+//         {
+//             return &par;
+//         }
+
+//     return par_temp;
+// }
+
+// MountStructs::partition *getFreePartition(disk *dk, const char *name)
+// {
+//     MountStructs::partition *par_temp;
+//     partition new_partition;
+//     par_temp = &new_partition;
+
+//     for (MountStructs::partition par : dk->partitions)
+//         if (par.status == -1)
+//         {
+//             par.status = 1;
+//             return &par;
+//         }
+
+//     return par_temp;
+// }
+
+bool isMounted(disk *dk, const char *name)
 {
     MountStructs::partition *par_temp;
     partition new_partition;
     par_temp = &new_partition;
 
     for (MountStructs::partition par : dk->partitions)
-        if (par.name == name)
-            par_temp = &par;
+        if (string(par.name) == name)
+            return true;
 
-    return par_temp;
+    return false;
 }
 
 vector<const char *> getPartitionMountedByID(char disk_id, int par_id)

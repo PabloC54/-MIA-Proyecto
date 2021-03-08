@@ -67,12 +67,12 @@ int readline(string line)
             while (std::getline(ss, string_temp, '='))
                 vector_temp.push_back(string_temp);
 
-            if(vector_temp.size()<2)
+            if (vector_temp.size() < 2)
                 throw Exception("bad parameters use (-param=\"value\")");
 
             transform(vector_temp.at(0).begin(), vector_temp.at(0).end(), vector_temp.at(0).begin(), ::tolower);
 
-            if (vector_temp.at(0) != "-path" && vector_temp.at(0) != "-name")
+            if (vector_temp.at(0) != "-path" && vector_temp.at(0) != "-name" && vector_temp.at(0) != "-id")
                 transform(vector_temp.at(1).begin(), vector_temp.at(1).end(), vector_temp.at(1).begin(), ::tolower);
 
             params[vector_temp[0]] = unquote(vector_temp[1]);

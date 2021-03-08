@@ -6,7 +6,6 @@ using namespace std;
 
 extern bool logged;
 extern string user;
-extern string password;
 
 int login(string, string, string);
 

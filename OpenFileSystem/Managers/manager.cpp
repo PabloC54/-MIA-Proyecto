@@ -22,7 +22,8 @@ int exec(string path)
                 if (boost::algorithm::starts_with(line, "#") || std::all_of(line.begin(), line.end(), [](char c) { return std::isspace(c); }))
                     continue; // COMENTARIOS
 
-                cout << "$ " << line << ": " << readline(line) << endl;
+                cout << "$ " << line << ": ";
+                cout << readline(line) << endl;
             }
 
         data.close();

@@ -36,15 +36,15 @@ struct superblock
 
 struct inode
 {
-    int uid;
-    int gid;
-    int size;
+    int uid = 1;
+    int gid = 1;
+    int size = sizeof(inode);
     char atime[16];
     char ctime[16];
     char mtime[16];
-    int block[12];
-    char type;
-    int permissions;
+    int block[15] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
+    char type = '\0';
+    int permissions = 110110100;
 };
 
 struct folder_content

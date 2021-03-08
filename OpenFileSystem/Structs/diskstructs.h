@@ -36,7 +36,7 @@ struct EBR
     char fit[2];
 };
 
-Partition* getPartition(MBR*, const char*);
+Partition* getPartition(MBR*, string);
 
 Partition* getNewPatition(MBR*, string);
 

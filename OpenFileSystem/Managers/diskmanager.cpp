@@ -2,6 +2,7 @@
 #include <fstream>
 #include <cstdlib>
 #include "time.h"
+#include <string>
 #include "diskmanager.h"
 #include "../Util/util.h"
 #include "../Structs/diskstructs.h"
@@ -9,7 +10,7 @@
 #include "../Structs/partitionstructs.h"
 
 using namespace std;
-vector<disk> mounted;
+disk mounted[26];
 
 int mkdisk(string size, string f, string u, string path)
 {
@@ -71,7 +72,7 @@ int mkdisk(string size, string f, string u, string path)
     fwrite("\0", 1, 1, file);
     fseek(file, size_int - 1, SEEK_SET);
     fwrite("\0", 1, 1, file);
-    rewind(file);
+    fseek(file, 0, SEEK_SET);
     fwrite(&mbr, sizeof(MBR), 1, file);
 
     fclose(file);
@@ -188,7 +189,7 @@ int fdisk(string size, string u, string path, string type, string f, string _del
     }
     else if (!add.empty())
     { // RESIZE MODE
-        Partition *partition = getPartition(&mbr, name.c_str());
+        Partition *partition = getPartition(&mbr, name);
 
         if (partition->status == '\\')
             throw Exception("specified partition does not exist");
@@ -238,7 +239,7 @@ int fdisk(string size, string u, string path, string type, string f, string _del
         if (size_int < 0)
             throw Exception("disk size was too big");
 
-        Partition *partition = getPartition(&mbr, name.c_str());
+        Partition *partition = getPartition(&mbr, name);
 
         if (partition->status != '\\')
         {
@@ -314,9 +315,9 @@ int fdisk(string size, string u, string path, string type, string f, string _del
                 throw Exception("specified partition does not exist");
         }
     }
-
-    file = fopen(path.c_str(), "wb");
-    rewind(file);
+    fclose(file);
+    file = fopen(path.c_str(), "r+b");
+    fseek(file, 0, SEEK_SET);
     fwrite(&mbr, sizeof(MBR), 1, file);
     fclose(file);
 
@@ -341,34 +342,64 @@ int mount(string path, string name)
     MBR mbr;
     fread(&mbr, sizeof(MBR), 1, file);
 
-    Partition *partition = getPartition(&mbr, name.c_str());
+    Partition *partition = getPartition(&mbr, name);
 
     if (partition->status == '\\')
         throw Exception("partition does not exist");
 
-    disk *dk = getDiskMounted(path.c_str());
+    disk new_disk;
+    disk *dk = &new_disk;
 
-    if (dk->status == -1)
+    for (int i = 0; i < 26; i++)
     {
-        if (mounted.size() == 26)
-            throw Exception("max disk mounted count reached");
-
-        disk *dk;
-        dk->id = getDiskId();
-        strcpy(dk->path, path.c_str());
-        dk->status = 0;
-
-        mounted.push_back(*dk);
+        if (string(mounted[i].path).substr(0, path.length()) == path)
+        {
+            dk = &mounted[i];
+            break;
+        }
     }
 
-    MountStructs::partition *par = MountStructs::getPartitionMounted(dk, name.c_str());
+    if (dk->status != 1)
+    {
+        if (mounted[25].status == 1)
+            throw Exception("max disk mounted count reached");
 
-    if (par->status != -1)
-        throw Exception("partition is already mounted");
+        for (int i = 0; i < 26; i++)
+        {
+            if (mounted[i].status == -1)
+            {
+                dk = &mounted[i];
+                break;
+            }
+        }
+
+        dk->id = getDiskId();
+        dk->status = 1;
+        strcpy(dk->path, path.c_str());
+    }
+
+    for (int i = 0; i < 99; i++)
+        if (string(dk->partitions[i].name).substr(0, name.length()) == name)
+            throw Exception("partition is already mounted");
+
+    MountStructs::partition new_partition;
+    MountStructs::partition *par = &new_partition;
+
+    for (int i = 0; i < 99; i++)
+        if (dk->partitions[i].status == -1)
+        {
+            dk->partitions[i].status = 1;
+            par = &dk->partitions[i];
+            break;
+        }
+
+    if (par->status == -1)
+        throw Exception("max partition mounted count reached for this disk");
 
     par->id = getPartitionId(*dk);
     strcpy(par->name, name.c_str());
-    par->status = 1;
+
+    cout << "mounted with id '" << endl;
 
     return 0;
 }
@@ -379,7 +410,7 @@ int unmount(string id)
         throw Exception("non-valid id");
 
     if (id.substr(0, 2) != "98")
-        throw Exception("non-valid id (ids start with '98')");
+        throw Exception("non-valid id (must start with '98')");
 
     int disk_i = -1, par_i = -1;
 
@@ -410,20 +441,19 @@ int unmount(string id)
                         disk_i = i;
                         par_i = j;
                     }
-
-        if (disk_i == -1 || par_i == -1)
-            throw Exception("partition not mounted");
-
-        mounted[disk_i].partitions[par_i].id = 0;
-        mounted[disk_i].partitions[par_i].status = 0;
-
-        for (MountStructs::partition par : mounted[disk_i].partitions)
-            if (par.id != -1)
-                return 0;
-
-        // mounted.erase(mounted.begin() + ids[0]);
     }
-    
+
+    if (disk_i == -1 || par_i == -1)
+        throw Exception("partition not mounted");
+
+    mounted[disk_i].partitions[par_i].id = -1;
+    mounted[disk_i].partitions[par_i].status = -1;
+
+    for (MountStructs::partition par : mounted[disk_i].partitions)
+        if (par.id != -1)
+            return 0;
+
+    mounted[disk_i].status = -1;
     return 0;
 }
 
@@ -447,93 +477,133 @@ int mkfs(string id, string type, string fs)
     if (id.substr(0, 2) != "98")
         throw Exception("non-valid id (ids start with '98')");
 
-    const char *path, *name;
+    const char *path;
+    string name;
     vector<const char *> data;
 
     if (id.length() == 4)
-    {
         data = getPartitionMountedByID(id.substr(3, 4)[0], stoi(id.substr(2, 3)));
-
-        if (data.empty())
-            throw Exception("id does not exist");
-
-        path = data[0];
-        name = data[1];
-    }
     else
-    {
         data = getPartitionMountedByID(id.substr(4, 5)[0], stoi(id.substr(2, 4)));
 
-        if (data.empty())
-            throw Exception("id does not exist");
+    if (data.empty())
+        throw Exception("id does not exist");
 
-        path = data[0];
-        name = data[1];
-    }
+    path = data[1];
+    name = data[0];
 
     FILE *file = fopen(path, "rb");
-    rewind(file);
+    fseek(file, 0, SEEK_SET);
 
     MBR mbr;
     fread(&mbr, sizeof(MBR), 1, file);
 
     Partition *partition = getPartition(&mbr, name);
 
+    // partition.status ==1 ? ya formateado: no formateado
+
     int num_structs;
     superblock super;
 
+    super.inode_size = sizeof(inode);
+    super.block_size = sizeof(file_block);
+
     if (fs == "2fs")
     {
+        super.filesystem_type = 2;
+
         num_structs = (partition->size - sizeof(superblock)) /
                       (4 + sizeof(inode) + 3 * sizeof(file_block));
-
-        super.filesystem_type = 2;
 
         super.inodes_count = num_structs;
         super.free_inodes_count = num_structs;
         super.blocks_count = 3 * num_structs;
         super.free_blocks_count = 3 * num_structs;
-
-        super.inode_size = sizeof(inode);
-        super.block_size = sizeof(file_block);
 
         super.bm_inode_start = sizeof(superblock);
         super.bm_block_start = super.bm_inode_start + super.inodes_count;
         super.inode_start = super.bm_block_start + super.blocks_count;
-        super.block_start = super.first_inode + num_structs * super.inodes_count;
+        super.block_start = super.inode_start + super.inode_size * super.inodes_count;
     }
     else
     {
+        super.filesystem_type = 3;
+
         num_structs = (partition->size - sizeof(superblock)) /
                       (4 + sizeof(journal) + sizeof(inode) + 3 * sizeof(file_block));
 
-        super.filesystem_type = 3;
+        super.journal_size = sizeof(journal);
 
         super.inodes_count = num_structs;
         super.free_inodes_count = num_structs;
         super.blocks_count = 3 * num_structs;
         super.free_blocks_count = 3 * num_structs;
-
-        super.journal_size = sizeof(journal);
-        super.inode_size = sizeof(inode);
-        super.block_size = sizeof(file_block);
 
         super.journal_start = sizeof(superblock);
         super.bm_inode_start = super.journal_start + super.journal_size;
         super.bm_block_start = super.bm_inode_start + super.inodes_count;
         super.inode_start = super.bm_block_start + super.blocks_count;
-        super.block_start = super.first_inode + num_structs * super.inodes_count;
+        super.block_start = super.inode_start + super.inode_size * super.inodes_count;
 
-        super.first_journal;
+        super.first_journal = 0;
     }
 
     partition->status = 1;
 
-    file = fopen(path, "wb");
+    // creando el primer inodo y bloques para users.txt
+
+    time_t t = time(NULL);
+    struct tm *tm = localtime(&t);
+    char date[16];
+    strftime(date, 16, "%d/%m/%Y %H:%M", tm);
+
+    inode inodo;
+    strcpy(inodo.ctime, date);
+
+    folder_block bloque;
+    strcpy(bloque.content[0].name, ".");
+    bloque.content[0].inode = 0;
+    strcpy(bloque.content[1].name, "..");
+    bloque.content[1].inode = 0;
+    strcpy(bloque.content[2].name, "users.txt");
+    bloque.content[2].inode = 1;
+    inodo.block[0] = 0;
+
+    inode inodo2;
+    strcpy(inodo2.ctime, date);
+    inodo2.type = '\1';
+
+    file_block bloque2;
+    strcpy(bloque2.content, "1,G,root\n1,U,root,root,123");
+    inodo2.block[0] = 1;
+
+    super.free_inodes_count -= 2;
+    super.first_inode += 2;
+    super.free_blocks_count -= 2;
+    super.first_block += 2;
+
+    // escribiendo todo
+    file = fopen(path, "r+b");
+
+    fseek(file, super.bm_inode_start, SEEK_SET);
+    fwrite("\1", 1, 2, file);
+    fseek(file, super.bm_block_start, SEEK_SET);
+    fwrite("\1", 1, 2, file);
+
+    fseek(file, super.inode_start, SEEK_SET);
+    fwrite(&inodo, sizeof(inode), 1, file);
+    fseek(file, super.inode_start + sizeof(inode), SEEK_SET);
+    fwrite(&inodo2, sizeof(inode), 1, file);
+
+    fseek(file, super.block_start, SEEK_SET);
+    fwrite(&bloque, sizeof(file_block), 1, file);
+    fseek(file, super.block_start + sizeof(file_block), SEEK_SET);
+    fwrite(&bloque2, sizeof(file_block), 1, file);
+
     fseek(file, partition->start, SEEK_SET);
     fwrite(&super, sizeof(superblock), 1, file);
 
-    rewind(file);
+    fseek(file, 0, SEEK_SET);
     fwrite(&mbr, sizeof(MBR), 1, file);
 
     fclose(file);

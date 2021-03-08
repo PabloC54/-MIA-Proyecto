@@ -9,17 +9,18 @@ diskstructs::diskstructs()
 {
 }
 
-Partition *getPartition(MBR *mbr, const char *name)
+Partition *getPartition(MBR *mbr, string name)
 {
     Partition *par_temp;
     Partition new_partition;
     par_temp = &new_partition;
 
-    for (Partition par : mbr->partitions)
+    for (int i = 0; i < 4; i++)
     {
-        if (strcmp(par.name, name))
+        if (string(mbr->partitions[i].name) == name)
         {
-            par_temp = &par;
+            par_temp = &mbr->partitions[i];
+            break;
         }
     }
 

@@ -44,7 +44,7 @@ struct inode
     char mtime[16];
     int block[15] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
     char type = '\0';
-    int permissions = 110110100;
+    int permissions = 664;
 };
 
 struct folder_content

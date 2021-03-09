@@ -574,7 +574,7 @@ int mkfs(string id, string type, string fs)
     inodo2.type = '\1';
 
     file_block bloque2;
-    strcpy(bloque2.content, "1,G,root\n1,U,root,root,123");
+    strcpy(bloque2.content, "1,G,root\n1,U,root,root,123\n");
     inodo2.block[0] = 1;
 
     super.free_inodes_count -= 2;

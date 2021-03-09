@@ -5,7 +5,9 @@
 using namespace std;
 
 extern bool logged;
-extern string user;
+extern string user_logged;
+extern const char* disk_path;
+extern string partition_name;
 
 int login(string, string, string);
 

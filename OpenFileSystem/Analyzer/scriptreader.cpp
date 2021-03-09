@@ -12,7 +12,6 @@
 #include "../Managers/storagemanager.h"
 #include "../Managers/reportmanager.h"
 #include "../Managers/manager.h"
-
 #include "../Util/util.h"
 
 using namespace std;
@@ -28,10 +27,7 @@ int readline(string line)
     while (ss >> word)
     {
         if (boost::algorithm::starts_with(word, "#"))
-        {
-            cout << "comentario" << endl;
             break;
-        }
 
         if (!regex_search(word, re))
             words.push_back(word);
@@ -59,7 +55,7 @@ int readline(string line)
         map<string, string> params;
         string string_temp;
 
-        for (int i = 1; i < words.size(); i++) // extrayendo los parametros en un map
+        for (int i = 1; i < words.size(); i++)
         {
             stringstream ss(words[i]);
             vector<string> vector_temp;
@@ -67,12 +63,18 @@ int readline(string line)
             while (std::getline(ss, string_temp, '='))
                 vector_temp.push_back(string_temp);
 
-            if (vector_temp.size() < 2)
-                throw Exception("bad parameters use (-param=\"value\")");
-
             transform(vector_temp.at(0).begin(), vector_temp.at(0).end(), vector_temp.at(0).begin(), ::tolower);
 
-            if (vector_temp.at(0) != "-path" && vector_temp.at(0) != "-name" && vector_temp.at(0) != "-id")
+            if (vector_temp.size() < 2)
+                if (vector_temp.at(0) == "-r")
+                {
+                    params[vector_temp[0]] = "true";
+                    continue;
+                }
+                else
+                    throw Exception("bad parameters (-param=\"value\")");
+
+            if (vector_temp.at(0) != "-path" && vector_temp.at(0) != "-name" && vector_temp.at(0) != "-id" && vector_temp.at(0) != "-username" && vector_temp.at(0) != "-password" && vector_temp.at(0) != "-usr"&& vector_temp.at(0) != "-ruta")
                 transform(vector_temp.at(1).begin(), vector_temp.at(1).end(), vector_temp.at(1).begin(), ::tolower);
 
             params[vector_temp[0]] = unquote(vector_temp[1]);
@@ -512,7 +514,7 @@ int readline(string line)
     }
     catch (const Exception &e)
     {
-        cout << "[#] " << e.what() << endl;
+        cout << "[#] " << e.what() << "  ";
         return -1;
     }
 }

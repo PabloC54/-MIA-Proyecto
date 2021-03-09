@@ -1,31 +1,35 @@
 #ifndef StorageManager
 #define StorageManager
 
+#include "../Structs/partitionstructs.h"
 #include <iostream>
+
 using namespace std;
 
-int chmod(string path, string ugo, string r);
+int chmod(string, string, string);
 
-int mkfile(string path, string r, string size, string cont);
+int change_permission(FILE, superblock, inode, int, string, char *);
 
-int cat(string filen);
+int mkfile(string, string, string, string);
 
-int rem(string path);
+int cat(string);
 
-int edit(string path, string cont);
+int rem(string);
 
-int ren(string path, string name);
+int edit(string, string);
 
-int mkdir(string path, string p);
+int ren(string, string);
 
-int cp(string path, string dest);
+int mkdir(string, string);
 
-int mv(string path, string mv);
+int cp(string, string);
 
-int find(string path, string name);
+int mv(string, string);
 
-int chown(string path, string r, string usr);
+int find(string, string);
 
-int chgrp(string usr, string grp);
+int chown(string, string, string);
+
+int chgrp(string, string);
 
 #endif

@@ -500,7 +500,19 @@ int mkfs(string id, string type, string fs)
 
     Partition *partition = getPartition(&mbr, name);
 
-    // partition.status ==1 ? ya formateado: no formateado
+    if (partition->status == '1')
+    {
+        cout << endl
+             << "already formated partition. reformat? (y/n)" << endl;
+        string rep;
+        cin >> rep;
+
+        if (rep == "n" || rep == "N")
+        {
+            cout << "reformat cancelled" << endl;
+            return 0;
+        }
+    }
 
     int num_structs;
     superblock super;
@@ -520,7 +532,7 @@ int mkfs(string id, string type, string fs)
         super.blocks_count = 3 * num_structs;
         super.free_blocks_count = 3 * num_structs;
 
-        super.bm_inode_start = sizeof(superblock);
+        super.bm_inode_start = partition->start + sizeof(superblock);
         super.bm_block_start = super.bm_inode_start + super.inodes_count;
         super.inode_start = super.bm_block_start + super.blocks_count;
         super.block_start = super.inode_start + super.inode_size * super.inodes_count;
@@ -534,13 +546,15 @@ int mkfs(string id, string type, string fs)
 
         super.journal_size = sizeof(journal);
 
+        super.journal_count = num_structs;
+        super.free_journal_count = num_structs;
         super.inodes_count = num_structs;
         super.free_inodes_count = num_structs;
         super.blocks_count = 3 * num_structs;
         super.free_blocks_count = 3 * num_structs;
 
-        super.journal_start = sizeof(superblock);
-        super.bm_inode_start = super.journal_start + super.journal_size;
+        super.journal_start = partition->start + sizeof(superblock);
+        super.bm_inode_start = super.journal_start + super.journal_size * super.journal_count;
         super.bm_block_start = super.bm_inode_start + super.inodes_count;
         super.inode_start = super.bm_block_start + super.blocks_count;
         super.block_start = super.inode_start + super.inode_size * super.inodes_count;
@@ -548,7 +562,7 @@ int mkfs(string id, string type, string fs)
         super.first_journal = 0;
     }
 
-    partition->status = 1;
+    partition->status = '1';
 
     // creando el primer inodo y bloques para users.txt
 
@@ -559,6 +573,8 @@ int mkfs(string id, string type, string fs)
 
     inode inodo;
     strcpy(inodo.ctime, date);
+
+    // crear los primeros journal
 
     folder_block bloque;
     strcpy(bloque.content[0].name, ".");
@@ -572,10 +588,10 @@ int mkfs(string id, string type, string fs)
     inode inodo2;
     strcpy(inodo2.ctime, date);
     inodo2.type = '\1';
+    inodo2.block[0] = 1;
 
     file_block bloque2;
     strcpy(bloque2.content, "1,G,root\n1,U,root,root,123\n");
-    inodo2.block[0] = 1;
 
     super.free_inodes_count -= 2;
     super.first_inode += 2;
@@ -586,9 +602,9 @@ int mkfs(string id, string type, string fs)
     file = fopen(path, "r+b");
 
     fseek(file, super.bm_inode_start, SEEK_SET);
-    fwrite("\1", 1, 2, file);
+    fwrite("\1\1", 2, 1, file);
     fseek(file, super.bm_block_start, SEEK_SET);
-    fwrite("\1", 1, 2, file);
+    fwrite("\1\1", 2, 1, file);
 
     fseek(file, super.inode_start, SEEK_SET);
     fwrite(&inodo, sizeof(inode), 1, file);

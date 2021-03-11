@@ -16,6 +16,8 @@ using namespace std;
 
 bool logged;
 string user_logged;
+int user_num;
+int group_num;
 const char *disk_path;
 string partition_name;
 
@@ -81,8 +83,8 @@ int login(string usuario, string password, string id)
     }
 
     stringstream ss(content);
-    string line;
-    string group;
+    string line, group;
+    int user_num_temp, group_num_temp;
     vector<vector<string>> groups;
 
     while (getline(ss, line, '\n'))
@@ -105,6 +107,7 @@ int login(string usuario, string password, string id)
                 if (words.at(0) == "0")
                     throw Exception("non-existent user");
 
+                user_num_temp = stoi(words.at(0));
                 group = words.at(2);
 
                 if (words.at(4) != password)
@@ -116,11 +119,18 @@ int login(string usuario, string password, string id)
     }
 
     for (vector<string> grp : groups)
-        if (grp.at(2) == group && grp.at(0) == "0")
-            throw Exception("non-existent user");
+        if (grp.at(2) == group)
+        {
+            if (grp.at(0) == "0")
+                throw Exception("non-existent user");
+
+            group_num_temp = stoi(grp.at(0));
+        }
 
     logged = true;
     user_logged = usuario;
+    user_num = user_num_temp;
+    group_num = group_num_temp;
     disk_path = path;
     partition_name = name;
 

@@ -40,28 +40,28 @@ Partition *getNewPatition(MBR *mbr, string fit)
             par = &mbr->partitions[0];
             strcpy(par->fit, fit.c_str());
             par->start = sizeof(MBR);
-            par->status = '\0';
+            par->status = '0';
         }
         else if (mbr->partitions[1].status == '\\')
         {
             par = &mbr->partitions[1];
             strcpy(par->fit, fit.c_str());
             par->start = mbr->partitions[0].start + mbr->partitions[0].size;
-            par->status = '\0';
+            par->status = '0';
         }
         else if (mbr->partitions[2].status == '\\')
         {
             par = &mbr->partitions[2];
             strcpy(par->fit, fit.c_str());
             par->start = mbr->partitions[1].start + mbr->partitions[1].size;
-            par->status = '\0';
+            par->status = '0';
         }
         else if (mbr->partitions[3].status == '\\')
         {
             par = &mbr->partitions[3];
             strcpy(par->fit, fit.c_str());
             par->start = mbr->partitions[2].start + mbr->partitions[2].size;
-            par->status = '\0';
+            par->status = '0';
         }
     }
     else if (fit == "bf")

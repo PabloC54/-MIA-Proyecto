@@ -30,14 +30,6 @@ struct disk
 
 extern disk mounted[26];
 
-// disk *getDiskMounted(const char *);
-
-// MountStructs::partition *getPartitionMounted(disk *, const char *);
-
-// MountStructs::partition *getFreePartition(disk *, const char *);
-
-bool isMounted(disk *, const char *);
-
 vector<const char *> getPartitionMountedByID(char, int);
 
 char getDiskId();

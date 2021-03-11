@@ -65,16 +65,25 @@ int readline(string line)
 
             transform(vector_temp.at(0).begin(), vector_temp.at(0).end(), vector_temp.at(0).begin(), ::tolower);
 
-            if (vector_temp.size() < 2)
-                if (vector_temp.at(0) == "-r")
+            if (vector_temp.at(0) == "-r")
+            {
+                if (vector_temp.size() > 1)
                 {
-                    params[vector_temp[0]] = "true";
-                    continue;
+                    string msg = vector_temp.at(0) + " parameter receives no values";
+                    throw Exception(msg.c_str());
                 }
-                else
-                    throw Exception("bad parameters (-param=\"value\")");
 
-            if (vector_temp.at(0) != "-path" && vector_temp.at(0) != "-name" && vector_temp.at(0) != "-id" && vector_temp.at(0) != "-username" && vector_temp.at(0) != "-password" && vector_temp.at(0) != "-usr"&& vector_temp.at(0) != "-ruta")
+                params[vector_temp[0]] = "true";
+                continue;
+            }
+
+            if (vector_temp.size() < 2)
+            {
+                string msg = vector_temp.at(0) + " parameter needs a values";
+                throw Exception(msg.c_str());
+            }
+
+            if (vector_temp.at(0) != "-path" && vector_temp.at(0) != "-name" && vector_temp.at(0) != "-id" && vector_temp.at(0) != "-username" && vector_temp.at(0) != "-password" && vector_temp.at(0) != "-usr" && vector_temp.at(0) != "-ruta")
                 transform(vector_temp.at(1).begin(), vector_temp.at(1).end(), vector_temp.at(1).begin(), ::tolower);
 
             params[vector_temp[0]] = unquote(vector_temp[1]);
@@ -497,6 +506,32 @@ int readline(string line)
                 throw Exception("-path parameter missing");
 
             return exec(path);
+        }
+        else if (command == "recovery")
+        { // RECOVERY FILE SYSTEM
+
+            string id;
+
+            if (params.find("-id") != params.end())
+                id = params["-id"];
+
+            if (id.empty())
+                throw Exception("-id parameter missing");
+
+            return recovery(id);
+        }
+        else if (command == "loss")
+        { // SIMULATE SYSTEM LOSS
+
+            string id;
+
+            if (params.find("-id") != params.end())
+                id = params["-id"];
+
+            if (id.empty())
+                throw Exception("-id parameter missing");
+
+            return loss(id);
         }
         else if (command == "pause")
         { // PAUSE

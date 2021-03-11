@@ -9,10 +9,10 @@ using namespace std;
 
 struct Partition
 {
-    char name[16];
+    char name[16] = {'\\', '\\', '\\', '\\', '\\', '\\', '\\', '\\', '\\', '\\', '\\', '\\', '\\', '\\', '\\', '\\'};
     char status = '\\';
     char type = '\\';
-    char fit[2];
+    char fit[2] = {'\\', '\\'};
     int start = -1;
     int size = -1;
 };

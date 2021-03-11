@@ -36,3 +36,17 @@ int exec(string path)
         throw Exception("file not found");
     }
 }
+
+int recovery(string id)
+{
+
+    
+
+    return 0;
+}
+
+int loss(string id)
+{
+
+    return 0;
+}

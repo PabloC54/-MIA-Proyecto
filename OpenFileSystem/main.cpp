@@ -26,7 +26,7 @@ int main()
         }
         catch (const std::exception &ex)
         {
-            cout << "[###] Fatal" << endl;
+            cout << "\n[###] Fatal" << endl;
             cout << ex.what() << endl;
         }
     }

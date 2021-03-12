@@ -58,23 +58,80 @@ string rep_disk(string name, MBR mbr)
     s += "<tr>\n";
     s += "  <td><br/>MBR<br/></td>\n";
 
+    vector<int> starts;
     for (int i = 0; i < 4; i++)
+        if (mbr.partitions[i].status != '\\')
+            starts.push_back((mbr.partitions[i].start));
+
+    sort(starts.begin(), starts.end());
+
+    vector<vector<int>> occuppied;
+    for (int start : starts)
+        for (int i = 0; i < 4; i++)
+            if (mbr.partitions[i].start == start)
+            {
+                vector<int> temp;
+                temp.push_back(i);
+                temp.push_back(start);
+                temp.push_back(mbr.partitions[i].size);
+
+                occuppied.push_back(temp);
+            }
+
+    vector<vector<int>> blank;
+    if (occuppied.empty())
     {
-        if (i == 0)
+        vector<int> temp;
+        temp.push_back(sizeof(MBR));
+        temp.push_back(mbr.size);
+        blank.push_back(temp);
+        s += "  <td>Libre<br/>100% del disco</td>\n";
+    }
+    else
+    {
+        if (sizeof(MBR) < occuppied.at(0).at(1))
         {
-            if (mbr.partitions[i].start - sizeof(MBR) > 0)
-                s += "  <td>Libre<br/>" + to_string((mbr.partitions[i].start - sizeof(MBR)) * 100 / mbr.size) + "% del disco</td>\n";
-        }
-        else
-        {
-            if (mbr.partitions[i].start - (mbr.partitions[i - 1].start + mbr.partitions[i - 1].size) > 0)
-                s += "  <td>Libre<br/>" + to_string((mbr.partitions[i].start - (mbr.partitions[i - 1].start + mbr.partitions[i - 1].size)) * 100 / mbr.size) + "% del disco</td>\n";
+            vector<int> temp;
+            temp.push_back(sizeof(MBR));
+            temp.push_back(occuppied.at(0).at(1));
+            blank.push_back(temp);
+            s += "  <td>Libre<br/>" + to_string(occuppied.at(0).at(1) / mbr.size) + "% del disco</td>\n";
         }
 
-        if (mbr.partitions[i].type == 'p')
-            s += "  <td>Primaria<br/>" + to_string(mbr.partitions[i].size * 100 / mbr.size) + "% del disco</td>\n";
-        else if (mbr.partitions[i].type == 'e')
-            s += "  <td>EBR<br/>WIP</td>\n";
+        for (int i = 0; i < occuppied.size(); i++)
+        {
+            vector<int> temp;
+
+            if (i != occuppied.size() - 1)
+            {
+                if (occuppied.at(i).at(1) + occuppied.at(i).at(2) < occuppied.at(i + 1).at(1))
+                {
+                    temp.push_back(occuppied.at(i).at(1) + occuppied.at(i).at(2));
+                    temp.push_back(occuppied.at(i + 1).at(1));
+                    blank.push_back(temp);
+
+                    if (occuppied.at(i).at(0) == 'p')
+                        s += "  <td>Primaria<br/>" + to_string(occuppied.at(i).at(2) / mbr.size) + "% del disco</td>\n";
+                    else if (occuppied.at(i).at(0) == 'e')
+                        s += "  <td>EXTENDIDA WIP<br/>" + to_string(occuppied.at(i).at(2) / mbr.size) + "% del disco</td>\n";
+
+                    s += "  <td>Libre<br/>" + to_string((occuppied.at(i + 1).at(1) - (occuppied.at(i).at(1) + occuppied.at(i).at(2))) / mbr.size) + "% del disco</td>\n";
+                }
+            }
+            else if (occuppied.at(i).at(2) < mbr.size)
+            {
+                temp.push_back(occuppied.at(i).at(1) + occuppied.at(i).at(2));
+                temp.push_back(mbr.size);
+                blank.push_back(temp);
+
+                if (occuppied.at(i).at(0) == 'p')
+                    s += "  <td>Primaria<br/>" + to_string(occuppied.at(i).at(2) / mbr.size) + "% del disco</td>\n";
+                else if (occuppied.at(i).at(0) == 'e')
+                    s += "  <td>EXTENDIDA WIP<br/>" + to_string(occuppied.at(i).at(2) / mbr.size) + "% del disco</td>\n";
+
+                s += "  <td>Libre<br/>" + to_string((mbr.size - (occuppied.at(i).at(1) + occuppied.at(i).at(2))) / mbr.size) + "% del disco</td>\n";
+            }
+        }
     }
 
     s += "</tr>\n";
@@ -166,8 +223,8 @@ string rep_block(FILE *file, superblock super)
         if (string(inodo.ctime).empty())
             continue;
 
-        // if (i != 0)
-        //     s += +" Foo_" + to_string(i - 1) + " -> Foo_" + to_string(i) + " ;\n";
+        string last;
+        bool first = true;
 
         if (inodo.type == '\0')
         {
@@ -180,7 +237,13 @@ string rep_block(FILE *file, superblock super)
                 fseek(file, super.block_start + inodo.block[j] * super.block_size, SEEK_SET);
                 fread(&block, sizeof(folder_block), 1, file);
 
-                s += +" Foo_" + to_string(inodo.block[j]) + " [label=<\n";
+                if (!first)
+                    s += +" Foo_" + last + " -> Foo_" + to_string(inodo.block[j]) + " ;\n";
+
+                first = false;
+                last = to_string(inodo.block[j]);
+
+                s += +" Foo_" + last + " [label=<\n";
                 s += +"<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">\n";
                 s += +"   <tr><td colspan='2' bgcolor='#70db70'><i>Bloque Carpeta " + to_string(inodo.block[j]) + "</i></td></tr>\n";
                 s += "<tr><td align=\"left\"><B>Nombre</B></td><td><B>Inodo</B></td></tr>\n";
@@ -203,6 +266,12 @@ string rep_block(FILE *file, superblock super)
                 file_block block;
                 fseek(file, super.block_start + inodo.block[j] * super.block_size, SEEK_SET);
                 fread(&block, sizeof(file_block), 1, file);
+
+                if (!first)
+                    s += +" Foo_" + last + " -> Foo_" + to_string(inodo.block[j]) + " ;\n";
+
+                first = false;
+                last = to_string(inodo.block[j]);
 
                 s += +" Foo_" + to_string(inodo.block[j]) + " [label=<\n";
                 s += +"<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">\n";
@@ -596,8 +665,6 @@ string rep_ls(FILE *file, superblock super, string ruta)
     s += " rankdir=\"LR\"\n";
     s += +" node [label=\"\\N\", fontsize=13 shape=plaintext fontname = \"helvetica\"];\n";
 
-    //  información de los archivos y carpetas con permisos, propietario, grupo propietario, tamaño, fecha de creación, fecha de modificación, hora de modificación, tipo, nombre.
-
     s += +"LS [label=<\n";
     s += +"<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">\n";
     //s += +"   <tr><td port='t' colspan='2' bgcolor='#666699'><i>" + dir_name + "</i></td></tr>\n";
@@ -696,7 +763,7 @@ string rep_ls(FILE *file, superblock super, string ruta)
             else
                 type = "Archivo";
 
-            s += "<tr><td>" + permissions + "</td><td>" + user + "</td><td>" + group + "</td><td>" + to_string(inodo_temp.size) + "</td><td>" + string(inodo_temp.ctime) + "</td><td>" + string(inodo_temp.mtime).substr(0, 10) + "</td><td>" + string(inodo_temp.mtime).substr(11, 16) + "</td><td>" + type + "</td><td>" + string(block.content[j].name) + "</td></tr>\n";
+            s += "<tr><td>" + permissions + "</td><td>" + user + "</td><td>" + group + "</td><td>" + to_string(inodo_temp.size) + "</td><td>" + string(inodo_temp.ctime).substr(0, 16) + "</td><td>" + string(inodo_temp.mtime).substr(0, 10) + "</td><td>" + string(inodo_temp.mtime).substr(11, 5) + "</td><td>" + type + "</td><td>" + string(block.content[j].name) + "</td></tr>\n";
         }
     }
 
@@ -720,13 +787,12 @@ int rep(string name, string path, string id, string ruta)
         throw Exception("could not create path");
 
     system(command_remove.c_str());
-    vector<const char *> data;
 
-    if (true)
-        if (id.length() == 4)
-            data = getPartitionMountedByID(id.substr(3, 4)[0], stoi(id.substr(2, 3)));
-        else
-            data = getPartitionMountedByID(id.substr(4, 5)[0], stoi(id.substr(2, 4)));
+    vector<const char *> data;
+    if (id.length() == 4)
+        data = getPartitionMountedByID(id.substr(3, 4)[0], stoi(id.substr(2, 3)));
+    else
+        data = getPartitionMountedByID(id.substr(4, 5)[0], stoi(id.substr(2, 4)));
 
     if (data.empty())
         throw Exception("id does not exist");
@@ -745,7 +811,7 @@ int rep(string name, string path, string id, string ruta)
     MBR mbr;
     fread(&mbr, sizeof(MBR), 1, file);
 
-    Partition *partition = getPartition(&mbr, partition_name);
+    Partition *partition = getPartition(file, &mbr, partition_name);
 
     if (name != "mbr" && name != "disk" && partition->status != '1')
         throw Exception("partition is not formated");
@@ -800,8 +866,6 @@ int rep(string name, string path, string id, string ruta)
     {
         body = rep_ls(file, super, ruta);
     }
-    else
-        throw Exception("what");
 
     if (name != "bm_inode" && name != "bm_block")
     {
@@ -812,7 +876,7 @@ int rep(string name, string path, string id, string ruta)
         string command_genere = "dot " + path + ".dot -Tpng -o " + path + ".png";
 
         if (system(command_genere.c_str()) != 0)
-            throw Exception("could not genere graph");
+            throw Exception("could not genere report");
     }
     else
     {

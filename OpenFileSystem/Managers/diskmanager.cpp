@@ -50,12 +50,12 @@ int mkdisk(string size, string f, string u, string path)
 
     time_t t = time(NULL);
     struct tm *tm = localtime(&t);
-    char date[16];
-    strftime(date, 16, "%d/%m/%Y %H:%M", tm);
+    char date[17];
+    strftime(date, 17, "%d/%m/%Y %H:%M", tm);
 
     MBR mbr;
     mbr.size = size_int;
-    strcpy(mbr.date, date);
+    strncpy(mbr.date, date, 16);
     mbr.signature = rand() % 100;
     strcpy(mbr.fit, f.c_str());
 
@@ -150,28 +150,21 @@ int fdisk(string size, string u, string path, string type, string f, string _del
 
         if (type == "p")
         {
-            Partition *partition = getNewPatition(&mbr, f);
-            if (partition->status == '\\')
-                throw Exception("disk already has 4 primary partitions");
+            Partition *partition = getNewPatition(&mbr, f, size_int);
 
-            strcpy(partition->name, name.c_str());
-            partition->type = type[0];
-            partition->size = size_int;
+            strncpy(partition->name, name.c_str(), 16);
+            partition->type = 'p';
         }
         else if (type == "e")
         {
-            Partition *partition = getNewPatition(&mbr, f);
-            if (partition->status == '\\')
-                throw Exception("disk already has 4 primary partitions");
-
             for (Partition par : mbr.partitions)
                 if (par.type == 'e')
                     throw Exception("disk already has an extended partition");
 
-            strcpy(partition->name, name.c_str());
-            partition->status = '\0';
-            partition->type = type[0];
-            partition->size = size_int;
+            Partition *partition = getNewPatition(&mbr, f, size_int);
+
+            strncpy(partition->name, name.c_str(), 16);
+            partition->type = 'e';
 
             EBR ebr;
             ebr.name[0] = '\\';
@@ -181,15 +174,52 @@ int fdisk(string size, string u, string path, string type, string f, string _del
             strcpy(ebr.fit, f.c_str());
 
             fseek(file, partition->start, SEEK_SET);
-            fwrite(&ebr, sizeof(ebr), 1, file);
+            fwrite(&ebr, sizeof(EBR), 1, file);
         }
         else
         { // PARTICIÓN LÓGICA
+            Partition *partition;
+
+            for (Partition par : mbr.partitions)
+                if (par.type == 'e')
+                {
+                    partition = &par;
+                    break;
+                }
+
+            if (partition->status == '\\')
+                throw Exception("disk has no extended partition");
+
+            int start = partition->start;
+            fseek(file, start, SEEK_SET);
+            EBR ebr;
+            fread(&ebr, sizeof(EBR), 1, file);
+
+            while (true)
+            {
+                if (ebr.status == '\\')
+                {
+                    strcpy(ebr.fit, f.c_str());
+                    strcpy(ebr.name, name.c_str());
+                    ebr.start = start + sizeof(EBR);
+                    ebr.size = size_int;
+                    ebr.status = '\0';
+
+                    break;
+                }
+                else
+                {
+                    ebr.next = ebr.start + ebr.size;
+
+                    fseek(file, ebr.start + ebr.size, SEEK_SET);
+                    fwrite(&ebr, sizeof(EBR), 1, file);
+                }
+            }
         }
     }
     else if (!add.empty())
     { // RESIZE MODE
-        Partition *partition = getPartition(&mbr, name);
+        Partition *partition = getPartition(file, &mbr, name);
 
         if (partition->status == '\\')
             throw Exception("specified partition does not exist");
@@ -223,68 +253,52 @@ int fdisk(string size, string u, string path, string type, string f, string _del
         if (_delete != "fast" && _delete != "full")
             throw Exception("-delete parameter non-valid. Valid: fast, full");
 
-        int units;
+        Partition *partition = getPartition(file, &mbr, name);
 
-        if (u == "b")
-            units = 1;
-        else if (u == "k")
-            units = 1024;
-        else if (u == "m")
-            units = 1024 * 1024;
-        else
-            throw Exception("-u parameter non-valid. Valid: b (bytes), k (kilobytes), m (megabytes)");
+        if (partition->status == '\\')
+            throw Exception("specified partition does not exist");
 
-        int size_int = stoi(_delete) * units;
+        if (partition->type == 'p')
+        { // PRIMARIA
 
-        if (size_int < 0)
-            throw Exception("disk size was too big");
-
-        Partition *partition = getPartition(&mbr, name);
-
-        if (partition->status != '\\')
-        {
-            if (partition->type == 'p')
-            { // PRIMARIA
-
-                Partition new_partition;
-                partition = &new_partition;
-
-                if (_delete == "full")
-                {
-                    // Rellenar con \0
-                }
-            }
-            else if (partition->type == 'e')
-            { // EXTENDIDA
-
-                Partition new_partition;
-                partition = &new_partition;
-
-                // eliminar particiones logicas si tiene
-
-                if (_delete == "full")
-                {
-                    // Rellenar con \0
-                }
-            }
-            else
+            if (_delete == "full")
             {
-                throw Exception("specified partition does not exist");
+                fseek(file, partition->start, SEEK_SET);
+                for (int i = 0; i < partition->size; i++)
+                    fwrite("\0", 1, 1, file);
             }
+
+            strcpy(partition->name, "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\");
+            strcpy(partition->fit, "\\\\");
+            partition->status = '\\';
+            partition->type = '\\';
+            partition->start = -1;
+            partition->size = -1;
+        }
+        else if (partition->type == 'e')
+        { // EXTENDIDA
+
+            EBR ebr;
+            fseek(file, partition->start, SEEK_SET);
+            fwrite(&ebr, sizeof(EBR), 1, file);
+
+            if (_delete == "full")
+            {
+                fseek(file, partition->start, SEEK_SET);
+
+                for (int i = 0; i < partition->size; i++)
+                    fwrite("\0", 1, 1, file);
+            }
+
+            strcpy(partition->name, "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\");
+            strcpy(partition->fit, "\\\\");
+            partition->status = '\\';
+            partition->type = '\\';
+            partition->start = -1;
+            partition->size = -1;
         }
         else
         { // LÓGICA
-
-            for (Partition par : mbr.partitions)
-            {
-                if (par.type == 'e')
-                {
-                    partition = &par;
-                }
-            }
-
-            if (partition->status = '\\')
-                throw Exception("specified partition does not exist");
 
             fseek(file, partition->start, SEEK_SET);
 
@@ -315,7 +329,7 @@ int fdisk(string size, string u, string path, string type, string f, string _del
                 throw Exception("specified partition does not exist");
         }
     }
-    fclose(file);
+
     file = fopen(path.c_str(), "r+b");
     fseek(file, 0, SEEK_SET);
     fwrite(&mbr, sizeof(MBR), 1, file);
@@ -342,7 +356,7 @@ int mount(string path, string name)
     MBR mbr;
     fread(&mbr, sizeof(MBR), 1, file);
 
-    Partition *partition = getPartition(&mbr, name);
+    Partition *partition = getPartition(file, &mbr, name);
 
     if (partition->status == '\\')
         throw Exception("partition does not exist");
@@ -399,7 +413,7 @@ int mount(string path, string name)
     par->id = getPartitionId(*dk);
     strcpy(par->name, name.c_str());
 
-    cout << "mounted with id '" << endl;
+    cout << "mounted with id '98" << par->id << dk->id << "'  ";
 
     return 0;
 }
@@ -498,7 +512,7 @@ int mkfs(string id, string type, string fs)
     MBR mbr;
     fread(&mbr, sizeof(MBR), 1, file);
 
-    Partition *partition = getPartition(&mbr, name);
+    Partition *partition = getPartition(file, &mbr, name);
 
     if (partition->status == '1')
     {
@@ -568,11 +582,12 @@ int mkfs(string id, string type, string fs)
 
     time_t t = time(NULL);
     struct tm *tm = localtime(&t);
-    char date[16];
-    strftime(date, 16, "%d/%m/%Y %H:%M", tm);
+    char date[17];
+    strftime(date, 17, "%d/%m/%Y %H:%M", tm);
+    ;
 
     inode inodo;
-    strcpy(inodo.ctime, date);
+    strncpy(inodo.ctime, date, 16);
 
     // crear los primeros journal
 
@@ -586,7 +601,7 @@ int mkfs(string id, string type, string fs)
     inodo.block[0] = 0;
 
     inode inodo2;
-    strcpy(inodo2.ctime, date);
+    strncpy(inodo2.ctime, date, 16);
     inodo2.type = '\1';
     inodo2.block[0] = 1;
 

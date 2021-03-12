@@ -14,7 +14,7 @@ int main()
     {
         try
         {
-            cout << "$ ";
+            cout << "\033[1;33m$\033[0m ";
             getline(cin, command);
 
             command = "exec -path='test.script'"; // quemado
@@ -22,12 +22,13 @@ int main()
             // if (boost::algorithm::starts_with(command, "#") || std::all_of(command.begin(), command.end(), [](char c) { return std::isspace(c); }))
             //     continue; // COMENTARIOS
 
-            cout << readline(command) << endl;
+            int return_value = readline(command);
+            if (return_value == 0)
+                cout << "\033[1;32m" << return_value << "\033[0m" << endl;
         }
-        catch (const std::exception &ex)
+        catch (const std::exception &e)
         {
-            cout << "\n[###] Fatal" << endl;
-            cout << ex.what() << endl;
+            cout << "\033[1;41m[##]\033[0m \033[1;31m" << e.what() << "\033[0m" << endl;
         }
     }
 }

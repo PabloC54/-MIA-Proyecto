@@ -7,6 +7,7 @@
 #include <boost/algorithm/string.hpp>
 
 #include "usermanager.h"
+#include "../Util/util.h"
 #include "../Structs/diskstructs.h"
 #include "../Structs/mountstructs.h"
 #include "../Structs/partitionstructs.h"
@@ -52,7 +53,7 @@ int login(string usuario, string password, string id)
     MBR mbr;
     fread(&mbr, sizeof(MBR), 1, file);
 
-    Partition *partition = getPartition(&mbr, name);
+    Partition *partition = getPartition(file, &mbr, name);
 
     superblock super;
     fseek(file, partition->start, SEEK_SET);
@@ -64,9 +65,10 @@ int login(string usuario, string password, string id)
 
     time_t t = time(NULL);
     struct tm *tm = localtime(&t);
-    char date[16];
-    strftime(date, 16, "%d/%m/%Y %H:%M", tm);
-    strcpy(inodo.atime, date);
+    char date[17];
+    strftime(date, 17, "%d/%m/%Y %H:%M", tm);
+    ;
+    strncpy(inodo.atime, date, 16);
 
     string content = "";
 
@@ -169,12 +171,13 @@ int mkgrp(string name)
     MBR mbr;
     fread(&mbr, sizeof(MBR), 1, file);
 
-    Partition *partition = getPartition(&mbr, partition_name);
+    Partition *partition = getPartition(file, &mbr, partition_name);
 
     time_t t = time(NULL);
     struct tm *tm = localtime(&t);
-    char date[16];
-    strftime(date, 16, "%d/%m/%Y %H:%M", tm);
+    char date[17];
+    strftime(date, 17, "%d/%m/%Y %H:%M", tm);
+    ;
 
     superblock super;
     fseek(file, partition->start, SEEK_SET);
@@ -260,22 +263,22 @@ int mkgrp(string name)
     }
     catch (const Exception &e)
     {
-        strcpy(inodo.atime, date);
+        strncpy(inodo.atime, date, 16);
         fseek(file, super.inode_start + sizeof(inode), SEEK_SET);
         fwrite(&inodo, sizeof(inode), 1, file);
 
-        strcpy(super.umtime, date);
+        strncpy(super.umtime, date, 16);
         fseek(file, partition->start, SEEK_SET);
         fwrite(&super, sizeof(superblock), 1, file);
 
         throw Exception(e.what());
     }
 
-    strcpy(inodo.mtime, date);
+    strncpy(inodo.mtime, date, 16);
     fseek(file, super.inode_start + sizeof(inode), SEEK_SET);
     fwrite(&inodo, sizeof(inode), 1, file);
 
-    strcpy(super.mtime, date);
+    strncpy(super.mtime, date, 16);
     fseek(file, partition->start, SEEK_SET);
     fwrite(&super, sizeof(superblock), 1, file);
 
@@ -298,12 +301,13 @@ int rmgrp(string name)
     MBR mbr;
     fread(&mbr, sizeof(MBR), 1, file);
 
-    Partition *partition = getPartition(&mbr, partition_name);
+    Partition *partition = getPartition(file, &mbr, partition_name);
 
     time_t t = time(NULL);
     struct tm *tm = localtime(&t);
-    char date[16];
-    strftime(date, 16, "%d/%m/%Y %H:%M", tm);
+    char date[17];
+    strftime(date, 17, "%d/%m/%Y %H:%M", tm);
+    ;
 
     superblock super;
     fseek(file, partition->start, SEEK_SET);
@@ -393,22 +397,22 @@ int rmgrp(string name)
     }
     catch (const Exception &e)
     {
-        strcpy(inodo.atime, date);
+        strncpy(inodo.atime, date, 16);
         fseek(file, super.inode_start + sizeof(inode), SEEK_SET);
         fwrite(&inodo, sizeof(inode), 1, file);
 
-        strcpy(super.umtime, date);
+        strncpy(super.umtime, date, 16);
         fseek(file, partition->start, SEEK_SET);
         fwrite(&super, sizeof(superblock), 1, file);
 
         throw Exception(e.what());
     }
 
-    strcpy(inodo.mtime, date);
+    strncpy(inodo.mtime, date, 16);
     fseek(file, super.inode_start + sizeof(inode), SEEK_SET);
     fwrite(&inodo, sizeof(inode), 1, file);
 
-    strcpy(super.mtime, date);
+    strncpy(super.mtime, date, 16);
     fseek(file, partition->start, SEEK_SET);
     fwrite(&super, sizeof(superblock), 1, file);
 
@@ -447,12 +451,13 @@ int mkusr(string usr, string pwd, string grp)
     MBR mbr;
     fread(&mbr, sizeof(MBR), 1, file);
 
-    Partition *partition = getPartition(&mbr, partition_name);
+    Partition *partition = getPartition(file, &mbr, partition_name);
 
     time_t t = time(NULL);
     struct tm *tm = localtime(&t);
-    char date[16];
-    strftime(date, 16, "%d/%m/%Y %H:%M", tm);
+    char date[17];
+    strftime(date, 17, "%d/%m/%Y %H:%M", tm);
+    ;
 
     superblock super;
     fseek(file, partition->start, SEEK_SET);
@@ -549,22 +554,22 @@ int mkusr(string usr, string pwd, string grp)
     }
     catch (const Exception &e)
     {
-        strcpy(inodo.atime, date);
+        strncpy(inodo.atime, date, 16);
         fseek(file, super.inode_start + sizeof(inode), SEEK_SET);
         fwrite(&inodo, sizeof(inode), 1, file);
 
-        strcpy(super.umtime, date);
+        strncpy(super.umtime, date, 16);
         fseek(file, partition->start, SEEK_SET);
         fwrite(&super, sizeof(superblock), 1, file);
 
         throw Exception(e.what());
     }
 
-    strcpy(inodo.mtime, date);
+    strncpy(inodo.mtime, date, 16);
     fseek(file, super.inode_start + sizeof(inode), SEEK_SET);
     fwrite(&inodo, sizeof(inode), 1, file);
 
-    strcpy(super.mtime, date);
+    strncpy(super.mtime, date, 16);
     fseek(file, partition->start, SEEK_SET);
     fwrite(&super, sizeof(superblock), 1, file);
 
@@ -587,12 +592,13 @@ int rmusr(string usr)
     MBR mbr;
     fread(&mbr, sizeof(MBR), 1, file);
 
-    Partition *partition = getPartition(&mbr, partition_name);
+    Partition *partition = getPartition(file, &mbr, partition_name);
 
     time_t t = time(NULL);
     struct tm *tm = localtime(&t);
-    char date[16];
-    strftime(date, 16, "%d/%m/%Y %H:%M", tm);
+    char date[17];
+    strftime(date, 17, "%d/%m/%Y %H:%M", tm);
+    ;
 
     superblock super;
     fseek(file, partition->start, SEEK_SET);
@@ -681,22 +687,22 @@ int rmusr(string usr)
     }
     catch (const Exception &e)
     {
-        strcpy(inodo.atime, date);
+        strncpy(inodo.atime, date, 16);
         fseek(file, super.inode_start + sizeof(inode), SEEK_SET);
         fwrite(&inodo, sizeof(inode), 1, file);
 
-        strcpy(super.umtime, date);
+        strncpy(super.umtime, date, 16);
         fseek(file, partition->start, SEEK_SET);
         fwrite(&super, sizeof(superblock), 1, file);
 
         throw Exception(e.what());
     }
 
-    strcpy(inodo.mtime, date);
+    strncpy(inodo.mtime, date, 16);
     fseek(file, super.inode_start + sizeof(inode), SEEK_SET);
     fwrite(&inodo, sizeof(inode), 1, file);
 
-    strcpy(super.mtime, date);
+    strncpy(super.mtime, date, 16);
     fseek(file, partition->start, SEEK_SET);
     fwrite(&super, sizeof(superblock), 1, file);
 

@@ -4,6 +4,7 @@
 #include <sstream>
 #include <cstdlib>
 #include <vector>
+#include <map>
 #include <boost/algorithm/string.hpp>
 
 #include "usermanager.h"
@@ -14,13 +15,13 @@
 
 using namespace std;
 
-int change_permission(FILE *file, superblock super, int num_nodo, string ugo, char *date)
+int change_permission(FILE *file, superblock super, int num_nodo, string ugo, const char *date)
 {
     fseek(file, super.inode_start + num_nodo * sizeof(inode), SEEK_SET);
     inode inodo;
     fread(&inodo, sizeof(inode), 1, file);
     inodo.permissions = stoi(ugo);
-    strcpy(inodo.mtime, date);
+    strncpy(inodo.mtime, date, 16);
 
     fseek(file, super.inode_start + num_nodo * sizeof(inode), SEEK_SET);
     fwrite(&inodo, sizeof(inode), 1, file);
@@ -103,12 +104,13 @@ int chmod(string path, string ugo, string r)
     MBR mbr;
     fread(&mbr, sizeof(MBR), 1, file);
 
-    Partition *partition = getPartition(&mbr, partition_name);
+    Partition *partition = getPartition(file, &mbr, partition_name);
 
     time_t t = time(NULL);
     struct tm *tm = localtime(&t);
-    char date[16];
-    strftime(date, 16, "%d/%m/%Y %H:%M", tm);
+    char date[17];
+    strftime(date, 17, "%d/%m/%Y %H:%M", tm);
+    ;
 
     superblock super;
     fseek(file, partition->start, SEEK_SET);
@@ -157,7 +159,7 @@ int chmod(string path, string ugo, string r)
             throw Exception(msg.c_str());
         }
 
-        strcpy(inodo.atime, date);
+        strncpy(inodo.atime, date, 16);
         fseek(file, super.inode_start + num_nodo * sizeof(inode), SEEK_SET);
         fread(&inodo, sizeof(inode), 1, file);
     }
@@ -165,7 +167,7 @@ int chmod(string path, string ugo, string r)
     if (r.empty())
     {
         inodo.permissions = stoi(ugo);
-        strcpy(inodo.mtime, date);
+        strncpy(inodo.mtime, date, 16);
         fseek(file, super.inode_start + num_nodo * sizeof(inode), SEEK_SET);
         fwrite(&inodo, sizeof(inode), 1, file);
     }
@@ -177,7 +179,7 @@ int chmod(string path, string ugo, string r)
         change_permission(file, super, num_nodo, ugo, date);
     }
 
-    strcpy(super.umtime, date);
+    strncpy(super.umtime, date, 16);
     fseek(file, partition->start, SEEK_SET);
     fwrite(&super, sizeof(superblock), 1, file);
 
@@ -197,12 +199,12 @@ int mkfile(string path, string r, string size, string cont)
     MBR mbr;
     fread(&mbr, sizeof(MBR), 1, file);
 
-    Partition *partition = getPartition(&mbr, partition_name);
+    Partition *partition = getPartition(file, &mbr, partition_name);
 
     time_t t = time(NULL);
     struct tm *tm = localtime(&t);
-    char date[16];
-    strftime(date, 16, "%d/%m/%Y %H:%M", tm);
+    char date[17];
+    strftime(date, 17, "%d/%m/%Y %H:%M", tm);
 
     superblock super;
     fseek(file, partition->start, SEEK_SET);
@@ -225,6 +227,7 @@ int mkfile(string path, string r, string size, string cont)
     file = fopen(disk_path, "r+b");
 
     int num_nodo = 0;
+    string folder;
 
     for (string dir : words)
     {
@@ -265,7 +268,9 @@ int mkfile(string path, string r, string size, string cont)
             }
         }
 
-        strcpy(inodo.atime, date);
+        folder = dir;
+
+        strncpy(inodo.atime, date, 16);
         fseek(file, super.inode_start + num_nodo * sizeof(inode), SEEK_SET);
         fread(&inodo, sizeof(inode), 1, file);
 
@@ -274,7 +279,10 @@ int mkfile(string path, string r, string size, string cont)
     }
 
     if (!has_permission(inodo, "w"))
-        throw Exception("access denied");
+    {
+        string msg = "'" + folder + "' write access denied";
+        throw Exception(msg.c_str());
+    }
 
     for (int i = 0; i < 12; i++)
     {
@@ -356,11 +364,11 @@ int mkfile(string path, string r, string size, string cont)
 
     // if (inodo.)
     //     inodo.permissions = stoi(ugo);
-    strcpy(inodo.mtime, date);
+    strncpy(inodo.mtime, date, 16);
     fseek(file, super.inode_start + num_nodo * sizeof(inode), SEEK_SET);
     fwrite(&inodo, sizeof(inode), 1, file);
 
-    strcpy(super.umtime, date);
+    strncpy(super.umtime, date, 16);
     fseek(file, partition->start, SEEK_SET);
     fwrite(&super, sizeof(superblock), 1, file);
 
@@ -369,8 +377,121 @@ int mkfile(string path, string r, string size, string cont)
     return 0;
 }
 
-int cat(string filen)
+int cat(map<string, string> filen)
 {
+    if (!logged)
+        throw Exception("no sesion active");
+
+    FILE *file = fopen(disk_path, "rb");
+    fseek(file, 0, SEEK_SET);
+
+    MBR mbr;
+    fread(&mbr, sizeof(MBR), 1, file);
+
+    Partition *partition = getPartition(file, &mbr, partition_name);
+
+    time_t t = time(NULL);
+    struct tm *tm = localtime(&t);
+    char date[17];
+    strftime(date, 17, "%d/%m/%Y %H:%M", tm);
+
+    superblock super;
+    fseek(file, partition->start, SEEK_SET);
+    fread(&super, sizeof(superblock), 1, file);
+
+    string param, path;
+    string full_content = "";
+
+    map<string, string>::iterator it;
+    for (it = filen.begin(); it != filen.end(); ++it)
+    {
+        param = it->first;
+        path = it->second;
+
+        stringstream ss(path.substr(1, path.size() - 1));
+
+        string dir;
+        vector<string> words;
+        while (getline(ss, dir, '/'))
+        {
+            words.push_back(dir);
+        }
+        string file_name = words.at(words.size() - 1);
+
+        inode inodo;
+        fseek(file, super.inode_start, SEEK_SET);
+        fread(&inodo, sizeof(inode), 1, file);
+
+        int num_nodo = 0;
+
+        for (string dir : words)
+        {
+            bool found = false;
+
+            for (int i = 0; i < 12; i++)
+            {
+                if (inodo.block[i] == -1)
+                    continue;
+
+                folder_block block;
+                fseek(file, super.block_start + inodo.block[i] * sizeof(folder_block), SEEK_SET);
+                fread(&block, sizeof(folder_block), 1, file);
+
+                for (int j = 0; j < 4; j++)
+                {
+                    if (block.content[j].name == dir)
+                    {
+                        num_nodo = block.content[j].inode;
+                        found = true;
+                    }
+                }
+
+                if (found)
+                    break;
+            }
+
+            if (!found)
+            {
+                string msg = "'" + path + "' not found";
+                throw Exception(msg.c_str());
+            }
+
+            fseek(file, super.inode_start + num_nodo * sizeof(inode), SEEK_SET);
+            fread(&inodo, sizeof(inode), 1, file);
+        }
+
+        if (inodo.type != '\1')
+        {
+            string msg = "'" + path + "' not a file";
+            throw Exception(msg.c_str());
+        }
+
+        string content = "";
+        for (int i = 0; i < 12; i++)
+        {
+            if (inodo.block[i] == -1)
+                continue;
+
+            file_block block;
+            fseek(file, super.block_start + inodo.block[i] * sizeof(file_block), SEEK_SET);
+            fread(&block, sizeof(file_block), 1, file);
+
+            content += string(block.content).substr(0, 64);
+        }
+
+        if (!(has_permission(inodo, "r")))
+        {
+            string msg = "'" + path + "' read acces denied";
+            throw Exception(msg.c_str());
+        }
+
+        full_content += "\033[1;36m" + file_name + "\033[0m\n";
+        full_content += content;
+        full_content += "\n";
+    }
+
+    cout << endl
+         << full_content;
 
     return 0;
 }

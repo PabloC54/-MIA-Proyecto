@@ -15,19 +15,25 @@ int exec(string path)
 
     if (data)
     {
-        cout << ">> file opened <<" << endl;
+        cout << "\033[1;36m>> file opened <<\033[0m" << endl;
         while (!data.eof())
             while (getline(data, line))
             {
                 if (boost::algorithm::starts_with(line, "#") || std::all_of(line.begin(), line.end(), [](char c) { return std::isspace(c); }))
-                    continue; // COMENTARIOS
+                {
+                    cout << "\033[1;36m" << line << "\033[0m" << endl;
+                    continue;
+                }
 
-                cout << "$ " << line << ": ";
-                cout << readline(line) << endl;
+                cout << "\033[1;33m$\033[0m " << line << " : ";
+
+                int return_value = readline(line);
+                if (return_value == 0)
+                    cout << "\033[1;32m" << return_value << "\033[0m" << endl;
             }
 
         data.close();
-        cout << ">> file closed <<" << endl;
+        cout << "\033[1;36m>> file closed <<\033[0m" << endl;
 
         return 0;
     }
@@ -39,8 +45,6 @@ int exec(string path)
 
 int recovery(string id)
 {
-
-    
 
     return 0;
 }

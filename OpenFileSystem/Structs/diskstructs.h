@@ -30,15 +30,15 @@ struct EBR
 {
     char name[16];
     char status = '\\';
-    int start;
-    int size;
+    int start=-1;
+    int size =-1;
     int next = -1;
     char fit[2] = {'\\', '\\'};
 };
 
-Partition *getPartition(MBR *, string);
+Partition *getPartition(FILE*, MBR *, string);
 
-Partition *getNewPatition(MBR *, string);
+Partition *getNewPatition(MBR *, string, int);
 
 bool isResizable(MBR, string, int);
 

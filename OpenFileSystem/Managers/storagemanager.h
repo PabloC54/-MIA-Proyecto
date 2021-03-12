@@ -3,6 +3,7 @@
 
 #include "../Structs/partitionstructs.h"
 #include <iostream>
+#include <map>
 
 using namespace std;
 
@@ -12,7 +13,7 @@ int change_permission(FILE, superblock, inode, int, string, char *);
 
 int mkfile(string, string, string, string);
 
-int cat(string);
+int cat(map<string, string>);
 
 int rem(string);
 

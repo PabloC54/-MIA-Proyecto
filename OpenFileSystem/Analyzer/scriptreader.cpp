@@ -152,8 +152,6 @@ int readline(string line)
 
             if (path.empty())
                 throw Exception("-path parameter missing");
-            if (type.empty())
-                throw Exception("-type parameter missing");
             if (name.empty())
                 throw Exception("-name parameter missing");
 
@@ -167,11 +165,6 @@ int readline(string line)
                 path = params["-path"];
             if (params.find("-name") != params.end())
                 name = params["-name"];
-
-            // if (path.empty())
-            //     throw Exception("-path parameter missing");
-            // if (name.empty())
-            //     throw Exception("-name parameter missing");
 
             return mount(path, name);
         }
@@ -321,13 +314,16 @@ int readline(string line)
         }
         else if (command == "cat")
         {
-            string filen;
+            map<string, string> filen;
 
-            if (params.find("-filen") != params.end())
-                filen = params["-filen"];
+            regex f("^file[0-9]+$");
+            map<string, string>::iterator it;
+            for (it = params.begin(); it != params.end(); ++it)
+                if (regex_search(it->first, f))
+                    filen[it->first] = it->second;
 
             if (filen.empty())
-                throw Exception("-filen parameter missing");
+                throw Exception("-filen parameter(s) missing");
 
             return cat(filen);
         }
@@ -549,7 +545,7 @@ int readline(string line)
     }
     catch (const Exception &e)
     {
-        cout << "[#] " << e.what() << "  ";
+        cout << "\033[1;41m[#]\033[0m \033[1;31m" << e.what() << "\033[0m" << endl;
         return -1;
     }
 }

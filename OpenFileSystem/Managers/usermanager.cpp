@@ -7,6 +7,7 @@
 #include <boost/algorithm/string.hpp>
 
 #include "usermanager.h"
+#include "storagemanager.h"
 #include "../Util/util.h"
 #include "../Structs/diskstructs.h"
 #include "../Structs/mountstructs.h"
@@ -55,6 +56,9 @@ int login(string usuario, string password, string id)
 
     Partition *partition = getPartition(file, &mbr, name);
 
+    if (partition->status != '1')
+        throw Exception("partition is not formatted");
+
     superblock super;
     fseek(file, partition->start, SEEK_SET);
     fread(&super, sizeof(superblock), 1, file);
@@ -67,7 +71,6 @@ int login(string usuario, string password, string id)
     struct tm *tm = localtime(&t);
     char date[17];
     strftime(date, 17, "%d/%m/%Y %H:%M", tm);
-    ;
     strncpy(inodo.atime, date, 16);
 
     string content = "";
@@ -89,6 +92,8 @@ int login(string usuario, string password, string id)
     int user_num_temp, group_num_temp;
     vector<vector<string>> groups;
 
+    bool found = false;
+
     while (getline(ss, line, '\n'))
     {
         stringstream us(line);
@@ -106,6 +111,8 @@ int login(string usuario, string password, string id)
         if (words.at(1) == "U")
             if (words.at(3) == usuario)
             {
+                found = true;
+
                 if (words.at(0) == "0")
                     throw Exception("non-existent user");
 
@@ -119,6 +126,9 @@ int login(string usuario, string password, string id)
                 }
             }
     }
+
+    if (!found)
+        throw Exception("non-existent user");
 
     for (vector<string> grp : groups)
         if (grp.at(2) == group)
@@ -177,7 +187,6 @@ int mkgrp(string name)
     struct tm *tm = localtime(&t);
     char date[17];
     strftime(date, 17, "%d/%m/%Y %H:%M", tm);
-    ;
 
     superblock super;
     fseek(file, partition->start, SEEK_SET);
@@ -250,8 +259,11 @@ int mkgrp(string name)
             if (inodo.block[i] == -1)
             {
                 inodo.block[i] = super.first_block;
+                fseek(file, super.bm_block_start + super.first_block, SEEK_SET);
+                fwrite("\1", 1, 1, file);
+
                 super.free_blocks_count -= 1;
-                super.first_block += 1;
+                super.first_block = get_first_block(file, super);
             }
 
             fseek(file, super.block_start + inodo.block[i] * sizeof(file_block), SEEK_SET);
@@ -307,7 +319,6 @@ int rmgrp(string name)
     struct tm *tm = localtime(&t);
     char date[17];
     strftime(date, 17, "%d/%m/%Y %H:%M", tm);
-    ;
 
     superblock super;
     fseek(file, partition->start, SEEK_SET);
@@ -337,7 +348,7 @@ int rmgrp(string name)
 
     try
     {
-
+        bool found = false;
         while (getline(ss, line, '\n'))
         {
             stringstream us(line);
@@ -351,8 +362,9 @@ int rmgrp(string name)
 
             if (words.at(1) == "G")
             {
-                if (words.at(2) == name)
+                if (words.at(0) != "0" && words.at(2) == name)
                 {
+                    found = true;
                     new_content += "0,G," + words.at(2) + "\n";
                     continue;
                 }
@@ -360,6 +372,9 @@ int rmgrp(string name)
 
             new_content += line + "\n";
         }
+
+        if (!found)
+            throw Exception("non-existent group");
 
         string temp;
         bool b_break = false;
@@ -384,8 +399,11 @@ int rmgrp(string name)
             if (inodo.block[i] == -1)
             {
                 inodo.block[i] = super.first_block;
+                fseek(file, super.bm_block_start + super.first_block * sizeof(file_block), SEEK_SET);
+                fwrite("\1", 1, 1, file);
+
                 super.free_blocks_count -= 1;
-                super.first_block += 1;
+                super.first_block = get_first_block(file, super);
             }
 
             fseek(file, super.block_start + inodo.block[i] * sizeof(file_block), SEEK_SET);
@@ -457,7 +475,6 @@ int mkusr(string usr, string pwd, string grp)
     struct tm *tm = localtime(&t);
     char date[17];
     strftime(date, 17, "%d/%m/%Y %H:%M", tm);
-    ;
 
     superblock super;
     fseek(file, partition->start, SEEK_SET);
@@ -485,10 +502,10 @@ int mkusr(string usr, string pwd, string grp)
     string line;
     int new_index = 1;
 
-    bool existent_grp = false;
-
     try
     {
+        bool existent_grp = false;
+
         while (getline(ss, line, '\n'))
         {
             stringstream us(line);
@@ -506,7 +523,7 @@ int mkusr(string usr, string pwd, string grp)
             if (words.at(1) == "U")
             {
                 new_index += 1;
-                if (words.at(2) == grp && words.at(3) == usr)
+                if (words.at(3) == usr)
                     throw Exception("already existent user");
             }
         }
@@ -541,8 +558,11 @@ int mkusr(string usr, string pwd, string grp)
             if (inodo.block[i] == -1)
             {
                 inodo.block[i] = super.first_block;
+                fseek(file, super.bm_block_start + super.first_block, SEEK_SET);
+                fwrite("\1", 1, 1, file);
+
                 super.free_blocks_count -= 1;
-                super.first_block += 1;
+                super.first_block = get_first_block(file, super);
             }
 
             fseek(file, super.block_start + inodo.block[i] * sizeof(file_block), SEEK_SET);
@@ -598,7 +618,6 @@ int rmusr(string usr)
     struct tm *tm = localtime(&t);
     char date[17];
     strftime(date, 17, "%d/%m/%Y %H:%M", tm);
-    ;
 
     superblock super;
     fseek(file, partition->start, SEEK_SET);
@@ -628,6 +647,8 @@ int rmusr(string usr)
 
     try
     {
+        bool found = false;
+
         while (getline(ss, line, '\n'))
         {
             stringstream us(line);
@@ -641,8 +662,9 @@ int rmusr(string usr)
 
             if (words.at(1) == "U")
             {
-                if (words.at(3) == usr)
+                if (words.at(0) != "0" && words.at(3) == usr)
                 {
+                    found = true;
                     new_content += "0,U," + words.at(2) + "," + words.at(3) + "," + words.at(4) + "\n";
                     continue;
                 }
@@ -650,6 +672,9 @@ int rmusr(string usr)
 
             new_content += line + "\n";
         }
+
+        if (!found)
+            throw Exception("non-existent user");
 
         string temp;
         bool b_break = false;
@@ -674,8 +699,11 @@ int rmusr(string usr)
             if (inodo.block[i] == -1)
             {
                 inodo.block[i] = super.first_block;
+                fseek(file, super.bm_block_start + super.first_block * sizeof(file_block), SEEK_SET);
+                fwrite("\1", 1, 1, file);
+
                 super.free_blocks_count -= 1;
-                super.first_block += 1;
+                super.first_block = get_first_block(file, super);
             }
 
             fseek(file, super.block_start + inodo.block[i] * sizeof(file_block), SEEK_SET);

@@ -200,7 +200,7 @@ int fdisk(string size, string u, string path, string type, string f, string _del
                 if (ebr.status == '\\')
                 {
                     strcpy(ebr.fit, f.c_str());
-                    strcpy(ebr.name, name.c_str());
+                    strncpy(ebr.name, name.c_str(), 12);
                     ebr.start = start + sizeof(EBR);
                     ebr.size = size_int;
                     ebr.status = '\0';
@@ -340,13 +340,6 @@ int fdisk(string size, string u, string path, string type, string f, string _del
 
 int mount(string path, string name)
 {
-
-    // if (path.empty() && name.empty())
-    // {
-
-    //     return 0;
-    // }
-
     FILE *file = fopen(path.c_str(), "rb");
     if (file == NULL)
         throw Exception("disk does not exist");
@@ -414,6 +407,18 @@ int mount(string path, string name)
     strcpy(par->name, name.c_str());
 
     cout << "mounted with id '98" << par->id << dk->id << "'  ";
+
+    if (partition->status == '1')
+    {
+        superblock super;
+        fseek(file, partition->start, SEEK_SET);
+        fread(&super, sizeof(superblock), 1, file);
+
+        super.mnt_count += 1;
+        
+        fseek(file, partition->start, SEEK_SET);
+        fwrite(&super, sizeof(superblock), 1, file);
+    }
 
     return 0;
 }
@@ -584,7 +589,6 @@ int mkfs(string id, string type, string fs)
     struct tm *tm = localtime(&t);
     char date[17];
     strftime(date, 17, "%d/%m/%Y %H:%M", tm);
-    ;
 
     inode inodo;
     strncpy(inodo.ctime, date, 16);

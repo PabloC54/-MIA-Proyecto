@@ -33,4 +33,8 @@ int chown(string, string, string);
 
 int chgrp(string, string);
 
+int get_first_inode(FILE*, superblock);
+
+int get_first_block(FILE*, superblock);
+
 #endif

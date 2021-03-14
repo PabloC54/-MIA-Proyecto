@@ -27,7 +27,7 @@ vector<const char *> getPartitionMountedByID(char disk_id, int par_id)
     vector<const char *> data;
 
     for (int i = 0; i < 26; i++)
-        if (mounted[i].id == disk_id)
+        if (mounted[i].id == toupper(disk_id))
             for (int j = 0; j < 99; j++)
                 if (mounted[i].partitions[j].id == par_id)
                 {

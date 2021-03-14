@@ -65,7 +65,7 @@ int readline(string line)
 
             transform(vector_temp.at(0).begin(), vector_temp.at(0).end(), vector_temp.at(0).begin(), ::tolower);
 
-            if (vector_temp.at(0) == "-r")
+            if (vector_temp.at(0) == "-r" || vector_temp.at(0) == "-p")
             {
                 if (vector_temp.size() > 1)
                 {
@@ -83,7 +83,7 @@ int readline(string line)
                 throw Exception(msg.c_str());
             }
 
-            if (vector_temp.at(0) != "-path" && vector_temp.at(0) != "-name" && vector_temp.at(0) != "-id" && vector_temp.at(0) != "-username" && vector_temp.at(0) != "-password" && vector_temp.at(0) != "-usr" && vector_temp.at(0) != "-ruta")
+            if (vector_temp.at(0) != "-path" && vector_temp.at(0) != "-name" && vector_temp.at(0) != "-id"&& vector_temp.at(0) != "-usr" && vector_temp.at(0) != "-grp" && vector_temp.at(0) != "-ruta")
                 transform(vector_temp.at(1).begin(), vector_temp.at(1).end(), vector_temp.at(1).begin(), ::tolower);
 
             params[vector_temp[0]] = unquote(vector_temp[1]);
@@ -198,23 +198,23 @@ int readline(string line)
         }
         else if (command == "login")
         { // USER MANAGER
-            string _usuario, _password, id;
+            string usr, pwd, id;
 
-            if (params.find("-usuario") != params.end())
-                _usuario = params["-usuario"];
-            if (params.find("-password") != params.end())
-                _password = params["-password"];
+            if (params.find("-usr") != params.end())
+                usr = params["-usr"];
+            if (params.find("-pwd") != params.end())
+                pwd = params["-pwd"];
             if (params.find("-id") != params.end())
                 id = params["-id"];
 
-            if (_usuario.empty())
-                throw Exception("-usuario parameter missing");
-            if (_password.empty())
-                throw Exception("-password parameter missing");
+            if (usr.empty())
+                throw Exception("-usr parameter missing");
+            if (pwd.empty())
+                throw Exception("-pwd parameter missing");
             if (id.empty())
                 throw Exception("-id parameter missing");
 
-            return login(_usuario, _password, id);
+            return login(usr, pwd, id);
         }
         else if (command == "logout")
         {
@@ -316,7 +316,7 @@ int readline(string line)
         {
             map<string, string> filen;
 
-            regex f("^file[0-9]+$");
+            regex f("^-file[0-9]+$");
             map<string, string>::iterator it;
             for (it = params.begin(); it != params.end(); ++it)
                 if (regex_search(it->first, f))
@@ -469,7 +469,6 @@ int readline(string line)
         }
         else if (command == "rep")
         { // REPORT MANAGER
-
             string name, path, id, ruta;
 
             if (params.find("-name") != params.end())
@@ -505,7 +504,6 @@ int readline(string line)
         }
         else if (command == "recovery")
         { // RECOVERY FILE SYSTEM
-
             string id;
 
             if (params.find("-id") != params.end())
@@ -518,7 +516,6 @@ int readline(string line)
         }
         else if (command == "loss")
         { // SIMULATE SYSTEM LOSS
-
             string id;
 
             if (params.find("-id") != params.end())
@@ -533,7 +530,7 @@ int readline(string line)
         { // PAUSE
             cout << "Press enter to continue . . ." << endl;
             cin.ignore();
-            return 0;
+            return 1;
         }
         else if (command == "exit")
         {
@@ -545,7 +542,7 @@ int readline(string line)
     }
     catch (const Exception &e)
     {
-        cout << "\033[1;41m[#]\033[0m \033[1;31m" << e.what() << "\033[0m" << endl;
+        cout << "\033[1;41m\033[4;41m[#]\033[0m \033[1;31m\033[1;31m" << e.what() << "\033[0m" << endl;
         return -1;
     }
 }

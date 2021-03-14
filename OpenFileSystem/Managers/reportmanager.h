@@ -1,8 +1,8 @@
 #ifndef ReportManager
 #define ReportManager
 
-#include <iostream>
 using namespace std;
+#include <iostream>
 
 int rep(string, string, string, string);
 

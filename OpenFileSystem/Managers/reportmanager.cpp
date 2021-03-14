@@ -148,6 +148,36 @@ string rep_journaling(FILE *file, superblock super)
 
     string s = "";
 
+    s += " digraph G {\n";
+    s += +" node [label=\"\\N\", fontsize=13 shape=plaintext fontname = \"helvetica\"];\n";
+
+    fseek(file, super.journal_start, SEEK_SET);
+
+    for (int i = 0; i < super.inodes_count; i++)
+    {
+        journal j;
+        fread(&j, sizeof(inode), 1, file);
+
+        if (j.type == '\\')
+            break;
+
+        if (i != 0)
+            s += +" Foo_" + to_string(i - 1) + " -> Foo_" + to_string(i) + " ;\n";
+
+        string t = "0";
+        if (j.type == '\1')
+            t = "1";
+
+        s += +" Foo_" + to_string(i) + " [label=<\n";
+        s += +"<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">\n";
+        s += +"   <tr><td colspan='6' bgcolor='#1ac6ff'><i>Journal " + to_string(i) + "</i></td></tr>\n";
+        s += "<tr><td>Fecha</td><td>Operacion</td><td>Tipo</td><td>Path</td><td>Contenido</td><td>Size</td></tr>\n";
+        s += "<tr><td>" + string(j.date) + "</td><td>" + string(j.operation) + "</td><td>" + t + "</td><td>" + string(j.path) + "</td><td>" + string(j.content) + "</td><td>" + to_string(j.size) + "</td></tr>\n";
+        s += "</table>>];\n";
+    }
+
+    s += "} ";
+
     return s;
 }
 
@@ -214,6 +244,9 @@ string rep_block(FILE *file, superblock super)
     s += " rankdir=\"LR\"\n";
     s += +" node [label=\"\\N\", fontsize=13 shape=plaintext fontname = \"helvetica\"];\n";
 
+    string last;
+    bool first = true;
+
     for (int i = super.inode_start; i < super.block_start; i += super.inode_size)
     {
         inode inodo;
@@ -222,9 +255,6 @@ string rep_block(FILE *file, superblock super)
 
         if (string(inodo.ctime).empty())
             continue;
-
-        string last;
-        bool first = true;
 
         if (inodo.type == '\0')
         {
@@ -291,7 +321,7 @@ string rep_block(FILE *file, superblock super)
 
 string rep_bm_inode(FILE *file, superblock super)
 {
-    string s = "";
+    string s = "|";
 
     int new_line = 0;
     char b;
@@ -303,9 +333,9 @@ string rep_bm_inode(FILE *file, superblock super)
         fread(&b, 1, 1, file);
 
         if (b == '\0')
-            s += "0  ";
+            s += " 0 |";
         else
-            s += "1  ";
+            s += " 1 |";
 
         new_line += 1;
 
@@ -333,9 +363,9 @@ string rep_bm_block(FILE *file, superblock super)
         fread(&b, 1, 1, file);
 
         if (b == '\0')
-            s += "0  ";
+            s += " 0 |";
         else
-            s += "1  ";
+            s += " 1 |";
 
         new_line += 1;
 
@@ -728,7 +758,7 @@ string rep_ls(FILE *file, superblock super, string ruta)
 
             for (int k = 0; k < 3; k++)
             {
-                int permission = stoi(to_string(inodo_temp.permissions).substr(k, k + 1));
+                int permission = stoi(to_string(inodo_temp.permissions).substr(k, 1));
 
                 int x = permission % 2;
                 int w = (permission / 2) % 2;

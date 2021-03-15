@@ -903,7 +903,7 @@ int rep(string name, string path, string id, string ruta)
         fwrite(body.c_str(), body.length(), 1, file);
         fclose(file);
 
-        string command_genere = "dot " + path + ".dot -Tpng -o " + path + ".png";
+        string command_genere = "dot " + path + ".dot -Tpdf -o " + path + ".pdf";
 
         if (system(command_genere.c_str()) != 0)
             throw Exception("could not genere report");

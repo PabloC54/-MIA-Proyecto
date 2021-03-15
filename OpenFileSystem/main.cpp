@@ -15,9 +15,7 @@ int main()
         try
         {
             cout << "\033[1;33m$\033[0m ";
-            //getline(cin, command);
-
-            command = "exec -path='in.script'"; // quemado
+            getline(cin, command);
 
             int return_value = readline(command);
             if (return_value == 0)

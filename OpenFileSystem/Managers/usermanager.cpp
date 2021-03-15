@@ -73,19 +73,7 @@ int login(string usuario, string password, string id)
     strftime(date, 17, "%d/%m/%Y %H:%M", tm);
     strncpy(inodo.atime, date, 16);
 
-    string content = "";
-
-    for (int i = 0; i < 12; i++)
-    {
-        if (inodo.block[i] == -1)
-            continue;
-
-        file_block block;
-        fseek(file, super.block_start + inodo.block[i] * sizeof(file_block), SEEK_SET);
-        fread(&block, sizeof(file_block), 1, file);
-
-        content += string(block.content).substr(0, sizeof(file_block));
-    }
+    string content = read_inode_content(file, super, inodo);
 
     stringstream ss(content);
     string line, group;
@@ -196,19 +184,7 @@ int mkgrp(string name)
     fseek(file, super.inode_start + sizeof(inode), SEEK_SET);
     fread(&inodo, sizeof(inode), 1, file);
 
-    string content = "";
-
-    for (int i = 0; i < 12; i++)
-    {
-        if (inodo.block[i] == -1)
-            continue;
-
-        file_block block;
-        fseek(file, super.block_start + inodo.block[i] * sizeof(file_block), SEEK_SET);
-        fread(&block, sizeof(file_block), 1, file);
-
-        content += string(block.content).substr(0, sizeof(file_block));
-    }
+    string content = read_inode_content(file, super, inodo);
 
     stringstream ss(content);
     string line;
@@ -236,42 +212,9 @@ int mkgrp(string name)
         }
 
         content += std::to_string(new_index) + ",G," + name + "\n";
-        string temp;
-        bool b_break = false;
 
         file = fopen(disk_path, "r+b");
-
-        for (int i = 0; i < 12; i++)
-        {
-            if (((i + 1) * 64) >= content.length())
-            {
-                temp = content.substr(i * 64, content.length());
-                b_break = true;
-            }
-            else
-            {
-                temp = content.substr(i * 64, (i + 1) * 64);
-            }
-
-            file_block block;
-            strcpy(block.content, temp.c_str());
-
-            if (inodo.block[i] == -1)
-            {
-                inodo.block[i] = super.first_block;
-                fseek(file, super.bm_block_start + super.first_block, SEEK_SET);
-                fwrite("\1", 1, 1, file);
-
-                super.free_blocks_count -= 1;
-                super.first_block = get_first_block(file, super);
-            }
-
-            fseek(file, super.block_start + inodo.block[i] * sizeof(file_block), SEEK_SET);
-            fwrite(&block, sizeof(file_block), 1, file);
-
-            if (b_break)
-                break;
-        }
+        write_inode_content(file, &super, &inodo, content);
     }
     catch (const Exception &e)
     {
@@ -328,19 +271,7 @@ int rmgrp(string name)
     fseek(file, super.inode_start + sizeof(inode), SEEK_SET);
     fread(&inodo, sizeof(inode), 1, file);
 
-    string content = "";
-
-    for (int i = 0; i < 12; i++)
-    {
-        if (inodo.block[i] == -1)
-            continue;
-
-        file_block block;
-        fseek(file, super.block_start + inodo.block[i] * sizeof(file_block), SEEK_SET);
-        fread(&block, sizeof(file_block), 1, file);
-
-        content += string(block.content).substr(0, sizeof(file_block));
-    }
+    string content = read_inode_content(file, super, inodo);
 
     stringstream ss(content);
     string line;
@@ -376,42 +307,8 @@ int rmgrp(string name)
         if (!found)
             throw Exception("non-existent group");
 
-        string temp;
-        bool b_break = false;
-
         file = fopen(disk_path, "r+b");
-
-        for (int i = 0; i < 12; i++)
-        {
-            if (((i + 1) * 64) >= new_content.length())
-            {
-                temp = new_content.substr(i * 64, new_content.length());
-                b_break = true;
-            }
-            else
-            {
-                temp = new_content.substr(i * 64, (i + 1) * 64);
-            }
-
-            file_block block;
-            strcpy(block.content, temp.c_str());
-
-            if (inodo.block[i] == -1)
-            {
-                inodo.block[i] = super.first_block;
-                fseek(file, super.bm_block_start + super.first_block * sizeof(file_block), SEEK_SET);
-                fwrite("\1", 1, 1, file);
-
-                super.free_blocks_count -= 1;
-                super.first_block = get_first_block(file, super);
-            }
-
-            fseek(file, super.block_start + inodo.block[i] * sizeof(file_block), SEEK_SET);
-            fwrite(&block, sizeof(file_block), 1, file);
-
-            if (b_break)
-                break;
-        }
+        write_inode_content(file, &super, &inodo, content);
     }
     catch (const Exception &e)
     {
@@ -484,19 +381,7 @@ int mkusr(string usr, string pwd, string grp)
     fseek(file, super.inode_start + sizeof(inode), SEEK_SET);
     fread(&inodo, sizeof(inode), 1, file);
 
-    string content = "";
-
-    for (int i = 0; i < 12; i++)
-    {
-        if (inodo.block[i] == -1)
-            continue;
-
-        file_block block;
-        fseek(file, super.block_start + inodo.block[i] * sizeof(file_block), SEEK_SET);
-        fread(&block, sizeof(file_block), 1, file);
-
-        content += string(block.content).substr(0, sizeof(file_block));
-    }
+    string content = read_inode_content(file, super, inodo);
 
     stringstream ss(content);
     string line;
@@ -532,45 +417,9 @@ int mkusr(string usr, string pwd, string grp)
             throw Exception("non-existent group");
 
         content += std::to_string(new_index) + ",U," + grp + "," + usr + "," + pwd + "\n";
-        string temp;
-        bool b_break = false;
 
         file = fopen(disk_path, "r+b");
-
-        for (int i = 0; i < 12; i++)
-        {
-            if (((i + 1) * sizeof(file_block)) >= content.length())
-            {
-                temp = content.substr(i * sizeof(file_block), content.length());
-                b_break = true;
-            }
-            else
-            {
-                temp = content.substr(i * sizeof(file_block), (i + 1) * sizeof(file_block));
-            }
-
-            file_block block;
-            for (int i = 0; i < 64; i++)
-                block.content[i] = '\0';
-
-            strcpy(block.content, temp.c_str());
-
-            if (inodo.block[i] == -1)
-            {
-                inodo.block[i] = super.first_block;
-                fseek(file, super.bm_block_start + super.first_block, SEEK_SET);
-                fwrite("\1", 1, 1, file);
-
-                super.free_blocks_count -= 1;
-                super.first_block = get_first_block(file, super);
-            }
-
-            fseek(file, super.block_start + inodo.block[i] * sizeof(file_block), SEEK_SET);
-            fwrite(&block, sizeof(file_block), 1, file);
-
-            if (b_break)
-                break;
-        }
+        write_inode_content(file, &super, &inodo, content);
     }
     catch (const Exception &e)
     {
@@ -627,19 +476,7 @@ int rmusr(string usr)
     fseek(file, super.inode_start + sizeof(inode), SEEK_SET);
     fread(&inodo, sizeof(inode), 1, file);
 
-    string content = "";
-
-    for (int i = 0; i < 12; i++)
-    {
-        if (inodo.block[i] == -1)
-            continue;
-
-        file_block block;
-        fseek(file, super.block_start + inodo.block[i] * sizeof(file_block), SEEK_SET);
-        fread(&block, sizeof(file_block), 1, file);
-
-        content += string(block.content).substr(0, sizeof(file_block));
-    }
+    string content = read_inode_content(file, super, inodo);
 
     stringstream ss(content);
     string line;
@@ -676,42 +513,8 @@ int rmusr(string usr)
         if (!found)
             throw Exception("non-existent user");
 
-        string temp;
-        bool b_break = false;
-
         file = fopen(disk_path, "r+b");
-
-        for (int i = 0; i < 12; i++)
-        {
-            if (((i + 1) * 64) >= new_content.length())
-            {
-                temp = new_content.substr(i * 64, new_content.length());
-                b_break = true;
-            }
-            else
-            {
-                temp = new_content.substr(i * 64, (i + 1) * 64);
-            }
-
-            file_block block;
-            strcpy(block.content, temp.c_str());
-
-            if (inodo.block[i] == -1)
-            {
-                inodo.block[i] = super.first_block;
-                fseek(file, super.bm_block_start + super.first_block * sizeof(file_block), SEEK_SET);
-                fwrite("\1", 1, 1, file);
-
-                super.free_blocks_count -= 1;
-                super.first_block = get_first_block(file, super);
-            }
-
-            fseek(file, super.block_start + inodo.block[i] * sizeof(file_block), SEEK_SET);
-            fwrite(&block, sizeof(file_block), 1, file);
-
-            if (b_break)
-                break;
-        }
+        write_inode_content(file, &super, &inodo, content);
     }
     catch (const Exception &e)
     {

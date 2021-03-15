@@ -67,7 +67,7 @@ struct file_block
 
 struct pointer_block
 {
-    int pointers[16];
+    int pointers[16] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
 };
 
 struct journal

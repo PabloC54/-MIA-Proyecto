@@ -74,6 +74,7 @@ string rep_disk(string name, MBR mbr)
                 temp.push_back(i);
                 temp.push_back(start);
                 temp.push_back(mbr.partitions[i].size);
+                temp.push_back(mbr.partitions[i].type);
 
                 occuppied.push_back(temp);
             }
@@ -100,6 +101,11 @@ string rep_disk(string name, MBR mbr)
 
         for (int i = 0; i < occuppied.size(); i++)
         {
+            if (occuppied.at(i).at(3) == 'p')
+                s += "  <td>Primaria<br/>" + to_string(occuppied.at(i).at(2) * 100 / mbr.size) + "% del disco</td>\n";
+            else if (occuppied.at(i).at(3) == 'e')
+                s += "  <td>EXTENDIDA WIP<br/>" + to_string(occuppied.at(i).at(2) * 100 / mbr.size) + "% del disco</td>\n";
+
             vector<int> temp;
 
             if (i != occuppied.size() - 1)
@@ -110,11 +116,6 @@ string rep_disk(string name, MBR mbr)
                     temp.push_back(occuppied.at(i + 1).at(1));
                     blank.push_back(temp);
 
-                    if (occuppied.at(i).at(0) == 'p')
-                        s += "  <td>Primaria<br/>" + to_string(occuppied.at(i).at(2) / mbr.size) + "% del disco</td>\n";
-                    else if (occuppied.at(i).at(0) == 'e')
-                        s += "  <td>EXTENDIDA WIP<br/>" + to_string(occuppied.at(i).at(2) / mbr.size) + "% del disco</td>\n";
-
                     s += "  <td>Libre<br/>" + to_string((occuppied.at(i + 1).at(1) - (occuppied.at(i).at(1) + occuppied.at(i).at(2))) / mbr.size) + "% del disco</td>\n";
                 }
             }
@@ -123,11 +124,6 @@ string rep_disk(string name, MBR mbr)
                 temp.push_back(occuppied.at(i).at(1) + occuppied.at(i).at(2));
                 temp.push_back(mbr.size);
                 blank.push_back(temp);
-
-                if (occuppied.at(i).at(0) == 'p')
-                    s += "  <td>Primaria<br/>" + to_string(occuppied.at(i).at(2) / mbr.size) + "% del disco</td>\n";
-                else if (occuppied.at(i).at(0) == 'e')
-                    s += "  <td>EXTENDIDA WIP<br/>" + to_string(occuppied.at(i).at(2) / mbr.size) + "% del disco</td>\n";
 
                 s += "  <td>Libre<br/>" + to_string((mbr.size - (occuppied.at(i).at(1) + occuppied.at(i).at(2))) / mbr.size) + "% del disco</td>\n";
             }

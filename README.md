@@ -1,11 +1,6 @@
 # [MIA] Proyecto 1
-
-|            Nombre             |  Carnet   |             Correo              |
-| :---------------------------: | :-------: | :-----------------------------: |
-| Pablo Fernando Cabrera Pineda | 201901698 | pablofernando50259107@gmail.com |
-
+Sistema de archivos EXT2/EXT3 local y minimalista hecho en C++.
 
 ## Documentación
-
 - [Manual técnico](docs/technical.md)
 - [Manual de usuario](docs/user.md)
